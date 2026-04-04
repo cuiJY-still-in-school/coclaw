@@ -263,6 +263,48 @@ Event system for handling UI interactions.
 - `server.js`: HTTP server with SSE support
 - `manifest.json`: Mod metadata and dependencies
 
+## Testing
+
+After installation, you can quickly test if dashboard is working:
+
+```bash
+# Download test script
+curl -L -o test-dashboard.js https://raw.githubusercontent.com/cuiJY-still-in-school/CSIS-dashboard/master/examples/test-dashboard.js
+
+# Run test script
+node test-dashboard.js
+```
+
+The test script will:
+1. Check if dashboard server is running on port 3000
+2. Test API endpoints
+3. Provide troubleshooting tips if not working
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Dashboard not accessible on port 3000**
+   - Ensure OpenClaw with roter is running
+   - Check if dashboard mod is enabled: `roter list`
+   - Enable if needed: `roter enable dashboard`
+   - Restart OpenClaw
+
+2. **GitHub access blocked (China users)**
+   ```bash
+   export https_proxy=socks5://localhost:7897
+   export http_proxy=socks5://localhost:7897
+   # Then run roter install commands
+   ```
+
+3. **Branch not found errors**
+   - roter now defaults to 'master' branch with fallback to 'main'
+   - This should work for most repositories
+
+4. **Test mod not found**
+   - The test mod is a separate repository
+   - Or create your own test mod using the example in README
+
 ## License
 
 MIT
