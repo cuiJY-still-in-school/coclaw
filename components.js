@@ -164,6 +164,33 @@ module.exports = {
   },
 
   /**
+   * Slider component
+   */
+  Slider: function(props) {
+    return this.createConfig('Slider', {
+      label: props.label || '',
+      value: props.value || 0,
+      min: props.min || 0,
+      max: props.max || 100,
+      step: props.step || 1,
+      onChange: props.onChange || null,
+      disabled: props.disabled || false
+    });
+  },
+
+  /**
+   * Checkbox component
+   */
+  Checkbox: function(props) {
+    return this.createConfig('Checkbox', {
+      label: props.label || '',
+      checked: props.checked || false,
+      onChange: props.onChange || null,
+      disabled: props.disabled || false
+    });
+  },
+
+  /**
    * Chart component (simple)
    */
   Chart: function(props) {

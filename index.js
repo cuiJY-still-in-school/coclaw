@@ -167,42 +167,92 @@ module.exports = {
         // Store component
         componentRegistry.set(componentId, component);
         
-        logger.info(`Component registered: ${modName}`);
-        
-        // Return controller for updates
+         logger.info(`Component registered: ${modName}`);
+         
+         // Broadcast addition to SSE clients
+         if (dashboardApi.broadcast) {
+           dashboardApi.broadcast('component.added', {
+             componentId,
+             modName,
+             displayName: component.displayName,
+             icon: component.icon,
+             timestamp: new Date().toISOString()
+           });
+         }
+         
+         // Return controller for updates
         return {
-          updateConfigure: (updates) => {
-            const comp = componentRegistry.get(componentId);
-            if (comp) {
-              comp.configure = { ...comp.configure, ...updates };
-            }
-          },
+           updateConfigure: (updates) => {
+             const comp = componentRegistry.get(componentId);
+             if (comp) {
+               comp.configure = { ...comp.configure, ...updates };
+               
+               // Broadcast update to SSE clients
+               if (dashboardApi.broadcast) {
+                 dashboardApi.broadcast('component.update.configure', {
+                   componentId,
+                   modName,
+                   updates,
+                   timestamp: new Date().toISOString()
+                 });
+               }
+             }
+           },
           
-          updateMain: (updates) => {
-            const comp = componentRegistry.get(componentId);
-            if (comp) {
-              comp.main = { ...comp.main, ...updates };
-            }
-          },
+           updateMain: (updates) => {
+             const comp = componentRegistry.get(componentId);
+             if (comp) {
+               comp.main = { ...comp.main, ...updates };
+               
+               // Broadcast update to SSE clients
+               if (dashboardApi.broadcast) {
+                 dashboardApi.broadcast('component.update.main', {
+                   componentId,
+                   modName,
+                   updates,
+                   timestamp: new Date().toISOString()
+                 });
+               }
+             }
+           },
           
-          updateLayout: (updates) => {
-            const comp = componentRegistry.get(componentId);
-            if (comp) {
-              comp.layout = { ...comp.layout, ...updates };
-            }
-          },
+           updateLayout: (updates) => {
+             const comp = componentRegistry.get(componentId);
+             if (comp) {
+               comp.layout = { ...comp.layout, ...updates };
+               
+               // Broadcast update to SSE clients
+               if (dashboardApi.broadcast) {
+                 dashboardApi.broadcast('component.update.layout', {
+                   componentId,
+                   modName,
+                   updates,
+                   timestamp: new Date().toISOString()
+                 });
+               }
+             }
+           },
           
-          remove: () => {
-            componentRegistry.delete(componentId);
-            
-            // Clean up event handlers for this component
-            const eventCount = dashboardApi.events.unregisterForComponent(componentId);
-            if (eventCount > 0) {
-              logger.info(`Cleaned up ${eventCount} event handlers for ${modName}`);
-            }
-            
-            logger.info(`Component removed: ${modName}`);
-          }
+           remove: () => {
+             componentRegistry.delete(componentId);
+             
+             // Clean up event handlers for this component
+             const eventCount = dashboardApi.events.unregisterForComponent(componentId);
+             if (eventCount > 0) {
+               logger.info(`Cleaned up ${eventCount} event handlers for ${modName}`);
+             }
+             
+             logger.info(`Component removed: ${modName}`);
+             
+             // Broadcast removal to SSE clients
+             if (dashboardApi.broadcast) {
+               dashboardApi.broadcast('component.removed', {
+                 componentId,
+                 modName,
+                 timestamp: new Date().toISOString()
+               });
+             }
+           }
         };
       },
       
@@ -329,11 +379,29 @@ module.exports = {
         
         logger.info(`Starting dashboard server on ${host}:${port}`);
         
-        try {
-          const http = require('http');
-          const url = require('url');
-          
-          const server = http.createServer((req, res) => {
+         try {
+           const http = require('http');
+           const url = require('url');
+           
+           // Store SSE clients for real-time updates
+           const clients = new Set();
+           
+           // Broadcast function to send updates to all connected clients
+           const broadcast = (event, data) => {
+             const message = `data: ${JSON.stringify({ event, data, timestamp: new Date().toISOString() })}\n\n`;
+             for (const client of clients) {
+               try {
+                 client.write(message);
+               } catch (error) {
+                 logger.warn('Failed to send SSE message:', error.message);
+               }
+             }
+           };
+           
+           // Expose broadcast function to dashboard API
+           dashboardApi.broadcast = broadcast;
+           
+           const server = http.createServer((req, res) => {
             const parsedUrl = url.parse(req.url, true);
             const pathname = parsedUrl.pathname;
             
@@ -449,14 +517,37 @@ module.exports = {
                return;
              }
              
-             if (pathname === '/api/events' && req.method === 'GET') {
-               const events = eventSystem.getAllEvents();
-               res.writeHead(200, { 'Content-Type': 'application/json' });
-               res.end(JSON.stringify({ events }));
-               return;
-             }
-             
-             // Dashboard HTML
+              if (pathname === '/api/events' && req.method === 'GET') {
+                const events = eventSystem.getAllEvents();
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ events }));
+                return;
+              }
+              
+              // SSE stream for real-time updates
+              if (pathname === '/api/events/stream') {
+                res.writeHead(200, {
+                  'Content-Type': 'text/event-stream',
+                  'Cache-Control': 'no-cache',
+                  'Connection': 'keep-alive',
+                  'Access-Control-Allow-Origin': '*'
+                });
+                
+                // Send initial connection message
+                res.write(`data: ${JSON.stringify({ event: 'connected', timestamp: new Date().toISOString() })}\n\n`);
+                
+                // Add client to set
+                clients.add(res);
+                
+                // Remove client on disconnect
+                req.on('close', () => {
+                  clients.delete(res);
+                });
+                
+                return;
+              }
+              
+              // Dashboard HTML
             if (pathname === '/' || pathname === '/dashboard') {
               const html = generateDashboardHtml();
               res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -470,7 +561,7 @@ module.exports = {
                message: 'CSIS Dashboard API',
                version: '1.0.0',
                components: Array.from(componentRegistry.values()).length,
-               endpoints: ['/api/components', '/api/layout', '/api/events', '/api/events/trigger', '/dashboard']
+                endpoints: ['/api/components', '/api/layout', '/api/events', '/api/events/trigger', '/api/events/stream', '/dashboard']
              }));
           });
           
@@ -995,13 +1086,75 @@ module.exports = {
       flex-direction: column;
       gap: 6px;
     }
-    .dashboard-form-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      margin-top: 16px;
-    }
-  </style>
+     .dashboard-form-actions {
+       display: flex;
+       justify-content: flex-end;
+       gap: 8px;
+       margin-top: 16px;
+     }
+     
+     /* Slider component */
+     .dashboard-slider-group {
+       display: flex;
+       flex-direction: column;
+       gap: 8px;
+     }
+     .dashboard-slider-label {
+       font-size: 14px;
+       color: var(--text-secondary);
+     }
+     .dashboard-slider {
+       width: 100%;
+       height: 6px;
+       -webkit-appearance: none;
+       appearance: none;
+       background: var(--bg-tertiary);
+       border-radius: 3px;
+       outline: none;
+     }
+     .dashboard-slider::-webkit-slider-thumb {
+       -webkit-appearance: none;
+       appearance: none;
+       width: 20px;
+       height: 20px;
+       border-radius: 50%;
+       background: var(--accent);
+       cursor: pointer;
+       border: 2px solid white;
+       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+     }
+     .dashboard-slider-value {
+       font-size: 14px;
+       color: var(--text-secondary);
+       text-align: right;
+       font-family: monospace;
+     }
+     
+     /* Checkbox component */
+     .dashboard-checkbox {
+       display: flex;
+       align-items: center;
+       gap: 8px;
+       cursor: pointer;
+       user-select: none;
+     }
+     .dashboard-checkbox input[type="checkbox"] {
+       width: 18px;
+       height: 18px;
+       border-radius: 4px;
+       border: 2px solid var(--border);
+       background: var(--bg-primary);
+       cursor: pointer;
+     }
+     .dashboard-checkbox input[type="checkbox"]:checked {
+       background: var(--accent);
+       border-color: var(--accent);
+     }
+     .dashboard-checkbox-label {
+       font-size: 14px;
+       color: var(--text-primary);
+     }
+   </style>
 </head>
 <body>
   <div class="dashboard">
@@ -1033,9 +1186,62 @@ module.exports = {
         document.getElementById('components-grid').innerHTML = 
           '<div class="placeholder">Failed to load components. Check console for details.</div>';
       }
-    }
-    
-    // Component rendering helper (simple)
+     }
+     
+     // Connect to SSE stream for real-time updates
+     function connectSSE() {
+       const eventSource = new EventSource('/api/events/stream');
+       
+       eventSource.onopen = () => {
+         console.log('SSE connected');
+       };
+       
+       eventSource.onerror = (error) => {
+         console.error('SSE error:', error);
+         // Attempt reconnect after delay
+         setTimeout(connectSSE, 5000);
+       };
+       
+       eventSource.onmessage = (event) => {
+         try {
+           const data = JSON.parse(event.data);
+           console.log('SSE event:', data.event);
+           
+           // Handle different event types
+           switch (data.event) {
+             case 'component.added':
+             case 'component.update.configure':
+             case 'component.update.main':
+             case 'component.update.layout':
+             case 'component.removed':
+               // Reload components to reflect changes
+               loadComponents();
+               break;
+             
+             case 'connected':
+               console.log('SSE stream connected');
+               break;
+             
+             default:
+               console.log('Unknown SSE event:', data.event);
+           }
+         } catch (error) {
+           console.error('Failed to parse SSE message:', error);
+         }
+       };
+       
+        // Store event source for cleanup
+        window._dashboardSSE = eventSource;
+        
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+          if (window._dashboardSSE) {
+            window._dashboardSSE.close();
+          }
+        });
+     }
+     
+     // Component rendering helper (simple)
     function renderComponent(comp) {
       const props = comp.props || {};
       const eventId = comp.eventId;
@@ -1134,9 +1340,34 @@ module.exports = {
             </div>
           </div>
         \`;
-      }
-      
-      // Table component
+       }
+       
+       // Slider component
+       if (comp.type === 'Slider') {
+         const { label = '', value = 0, min = 0, max = 100, step = 1, disabled = false } = props;
+         return \`
+           <div class="dashboard-slider-group" data-component-type="Slider">
+             \${label ? '<div class="dashboard-slider-label">' + label + '</div>' : ''}
+             <input class="dashboard-slider" type="range" 
+                    min="\${min}" max="\${max}" step="\${step}" value="\${value}"
+                    \${disabled ? 'disabled' : ''} data-event-id="\${eventId || ''}">
+             <div class="dashboard-slider-value">\${value}</div>
+           </div>
+         \`;
+       }
+       
+       // Checkbox component
+       if (comp.type === 'Checkbox') {
+         const { label = '', checked = false, disabled = false } = props;
+         return \`
+           <label class="dashboard-checkbox" data-component-type="Checkbox">
+             <input type="checkbox" \${checked ? 'checked' : ''} \${disabled ? 'disabled' : ''} data-event-id="\${eventId || ''}">
+             \${label ? '<span class="dashboard-checkbox-label">' + label + '</span>' : ''}
+           </label>
+         \`;
+       }
+       
+       // Table component
       if (comp.type === 'Table') {
         const { columns = [], data = [], pagination = false, pageSize = 10 } = props;
         const displayData = pagination ? data.slice(0, pageSize) : data;
@@ -1445,10 +1676,11 @@ module.exports = {
     }
     
     // Initialize
-    document.addEventListener('DOMContentLoaded', () => {
-      loadComponents();
-      
-      // Setup grid drop zone
+     document.addEventListener('DOMContentLoaded', () => {
+       loadComponents();
+       connectSSE();
+       
+       // Setup grid drop zone
       const grid = document.getElementById('components-grid');
       if (grid) {
         grid.addEventListener('dragover', (e) => {
