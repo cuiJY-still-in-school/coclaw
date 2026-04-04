@@ -27,19 +27,60 @@ module.exports = {
     
     logger.info('CSIS Dashboard loading...');
     
+    // Initialize file system for layout persistence
+    const fs = require('fs');
+    const path = require('path');
+    
+    // Determine layout file path
+    // Try to save in user's OpenClaw mods directory first
+    const os = require('os');
+    const userHome = os.homedir();
+    const openclawModsDir = path.join(userHome, '.openclaw', 'mods', 'dashboard');
+    const layoutFilePath = path.join(openclawModsDir, 'layout.json');
+    
+    // Ensure directory exists
+    try {
+      if (!fs.existsSync(openclawModsDir)) {
+        fs.mkdirSync(openclawModsDir, { recursive: true });
+        logger.info(`Created dashboard data directory: ${openclawModsDir}`);
+      }
+    } catch (error) {
+      logger.warn(`Failed to create dashboard data directory: ${error.message}`);
+    }
+    
     // Initialize core systems
     const componentRegistry = new Map();
     const layoutManager = {
       layout: {},
       save: function(layout) {
         this.layout = { ...this.layout, ...layout };
-        // TODO: Persist to file
-        logger.info('Layout saved');
+        
+        // Persist to file
+        try {
+          fs.writeFileSync(layoutFilePath, JSON.stringify(this.layout, null, 2));
+          logger.info(`Layout saved to: ${layoutFilePath}`);
+        } catch (error) {
+          logger.error(`Failed to save layout: ${error.message}`);
+        }
       },
       load: function() {
+        // Try to load from file
+        try {
+          if (fs.existsSync(layoutFilePath)) {
+            const data = fs.readFileSync(layoutFilePath, 'utf8');
+            this.layout = JSON.parse(data);
+            logger.info(`Layout loaded from: ${layoutFilePath}`);
+          }
+        } catch (error) {
+          logger.warn(`Failed to load layout: ${error.message}`);
+          this.layout = {};
+        }
         return this.layout;
       }
     };
+    
+    // Load saved layout on startup
+    layoutManager.load();
     
     // Initialize event system
     const eventSystem = new EventSystem({
@@ -104,17 +145,20 @@ module.exports = {
             schema: options.mainSchema || {}
           },
           
-          // Layout
-          layout: {
-            x: options.x || 0,
-            y: options.y || 0,
-            width: options.width || 4,
-            height: options.height || 3,
-            minWidth: options.minWidth || 2,
-            minHeight: options.minHeight || 2,
-            resizable: options.resizable !== false,
-            draggable: options.draggable !== false
-          },
+          // Layout - load from saved layout or use defaults
+          layout: (() => {
+            const savedLayout = layoutManager.layout[modName];
+            return {
+              x: savedLayout?.x ?? options.x ?? 0,
+              y: savedLayout?.y ?? options.y ?? 0,
+              width: savedLayout?.width ?? options.width ?? 4,
+              height: savedLayout?.height ?? options.height ?? 3,
+              minWidth: savedLayout?.minWidth ?? options.minWidth ?? 2,
+              minHeight: savedLayout?.minHeight ?? options.minHeight ?? 2,
+              resizable: savedLayout?.resizable ?? options.resizable ?? true,
+              draggable: savedLayout?.draggable ?? options.draggable ?? true
+            };
+          })(),
           
           // Metadata
           metadata: options.metadata || {}
@@ -330,22 +374,54 @@ module.exports = {
               return;
             }
             
-             if (pathname === '/api/layout/save' && req.method === 'POST') {
-               let body = '';
-               req.on('data', chunk => body += chunk);
-               req.on('end', () => {
-                 try {
-                   const layout = JSON.parse(body);
-                   layoutManager.save(layout);
-                   res.writeHead(200, { 'Content-Type': 'application/json' });
-                   res.end(JSON.stringify({ success: true }));
-                 } catch (error) {
-                   res.writeHead(400, { 'Content-Type': 'application/json' });
-                   res.end(JSON.stringify({ error: 'Invalid JSON' }));
-                 }
-               });
-               return;
-             }
+              if (pathname === '/api/layout/save' && req.method === 'POST') {
+                let body = '';
+                req.on('data', chunk => body += chunk);
+                req.on('end', () => {
+                  try {
+                    const data = JSON.parse(body);
+                    
+                    if (data.componentId && data.position) {
+                      // Update specific component layout
+                      const component = componentRegistry.get(data.componentId);
+                      if (component) {
+                        component.layout = { 
+                          ...component.layout, 
+                          x: data.position.x || 0,
+                          y: data.position.y || 0
+                        };
+                        
+                        // Save entire layout to file
+                        const layout = {};
+                        for (const [id, comp] of componentRegistry.entries()) {
+                          layout[id] = comp.layout;
+                        }
+                        layoutManager.save(layout);
+                        
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ 
+                          success: true,
+                          componentId: data.componentId,
+                          layout: component.layout
+                        }));
+                      } else {
+                        res.writeHead(404, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'Component not found' }));
+                      }
+                    } else {
+                      // Legacy support: save entire layout object
+                      layoutManager.save(data);
+                      res.writeHead(200, { 'Content-Type': 'application/json' });
+                      res.end(JSON.stringify({ success: true }));
+                    }
+                  } catch (error) {
+                    logger.error(`Layout save error: ${error.message}`);
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Invalid JSON' }));
+                  }
+                });
+                return;
+              }
              
              // Event API endpoints
              if (pathname === '/api/events/trigger' && req.method === 'POST') {
@@ -543,9 +619,11 @@ module.exports = {
     
     .components-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      grid-template-columns: repeat(12, 1fr);
+      grid-auto-rows: minmax(100px, auto);
       gap: 20px;
       margin-bottom: 40px;
+      position: relative;
     }
     
     .component {
@@ -772,6 +850,157 @@ module.exports = {
       outline: none;
       border-color: var(--accent);
     }
+    
+    /* Table styles */
+    .dashboard-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .dashboard-table th {
+      background-color: var(--bg-tertiary);
+      color: var(--text-secondary);
+      text-align: left;
+      padding: 10px 12px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    .dashboard-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+      color: var(--text-primary);
+    }
+    .dashboard-table tr:hover {
+      background-color: rgba(100, 116, 139, 0.1);
+    }
+    
+    /* Progress bar styles */
+    .dashboard-progress {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .dashboard-progress-label {
+      font-size: 14px;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+    }
+    .dashboard-progress-bar {
+      height: 8px;
+      background-color: var(--bg-tertiary);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .dashboard-progress-fill {
+      height: 100%;
+      background-color: var(--accent);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+    .dashboard-progress-success .dashboard-progress-fill {
+      background-color: var(--success);
+    }
+    .dashboard-progress-warning .dashboard-progress-fill {
+      background-color: #f59e0b;
+    }
+    .dashboard-progress-error .dashboard-progress-fill {
+      background-color: #ef4444;
+    }
+    
+    /* Chart container */
+    .dashboard-chart {
+      background-color: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 16px;
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+    }
+    .dashboard-chart-title {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .dashboard-chart-container {
+      flex: 1;
+      position: relative;
+    }
+    
+    /* Card styles */
+    .dashboard-card {
+      background-color: var(--bg-tertiary);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      padding: 16px;
+    }
+    .dashboard-card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+    .dashboard-card-content {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    .dashboard-card-actions {
+      margin-top: 16px;
+      display: flex;
+      gap: 8px;
+    }
+    
+    /* Status indicator styles */
+    .dashboard-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .dashboard-status-info {
+      background-color: rgba(59, 130, 246, 0.1);
+      color: #60a5fa;
+      border-left: 3px solid #60a5fa;
+    }
+    .dashboard-status-success {
+      background-color: rgba(34, 197, 94, 0.1);
+      color: #22c55e;
+      border-left: 3px solid #22c55e;
+    }
+    .dashboard-status-warning {
+      background-color: rgba(245, 158, 11, 0.1);
+      color: #f59e0b;
+      border-left: 3px solid #f59e0b;
+    }
+    .dashboard-status-error {
+      background-color: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+      border-left: 3px solid #ef4444;
+    }
+    .dashboard-status-icon {
+      font-size: 16px;
+    }
+    
+    /* Form styles */
+    .dashboard-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .dashboard-form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .dashboard-form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 16px;
+    }
   </style>
 </head>
 <body>
@@ -808,17 +1037,173 @@ module.exports = {
     
     // Component rendering helper (simple)
     function renderComponent(comp) {
-      if (comp.eventId && comp.type === 'Button') {
-        const { label = 'Button', variant = 'primary', disabled = false } = comp.props || {};
+      const props = comp.props || {};
+      const eventId = comp.eventId;
+      
+      // Button component
+      if (comp.type === 'Button') {
+        const { label = 'Button', variant = 'primary', disabled = false } = props;
         const variantClass = variant === 'primary' ? 'dashboard-btn-primary' : variant === 'secondary' ? 'dashboard-btn-secondary' : 'dashboard-btn-danger';
         return \`
-          <button class="dashboard-btn \${variantClass}" data-event-id="\${comp.eventId}" \${disabled ? 'disabled' : ''}>
+          <button class="dashboard-btn \${variantClass}" data-event-id="\${eventId || ''}" data-component-type="Button" \${disabled ? 'disabled' : ''}>
             \${label}
           </button>
         \`;
       }
-      // Fallback to prop display
-      return Object.entries(comp.props || {}).map(([key, val]) => \`
+      
+      // Switch component
+      if (comp.type === 'Switch') {
+        const { label = '', checked = false, disabled = false } = props;
+        return \`
+          <label class="dashboard-switch" data-component-type="Switch">
+            <input type="checkbox" \${checked ? 'checked' : ''} \${disabled ? 'disabled' : ''} data-event-id="\${eventId || ''}">
+            <span class="dashboard-switch-slider"></span>
+            \${label ? '<span class="dashboard-switch-label">' + label + '</span>' : ''}
+          </label>
+        \`;
+      }
+      
+      // Input component
+      if (comp.type === 'Input') {
+        const { label = '', value = '', type = 'text', placeholder = '', disabled = false } = props;
+        return \`
+          <div class="dashboard-input-group" data-component-type="Input">
+            \${label ? '<div class="dashboard-input-label">' + label + '</div>' : ''}
+            <input class="dashboard-input" type="\${type}" value="\${value}" placeholder="\${placeholder}" 
+                   \${disabled ? 'disabled' : ''} data-event-id="\${eventId || ''}">
+          </div>
+        \`;
+      }
+      
+      // Select component
+      if (comp.type === 'Select') {
+        const { label = '', value = '', options = [], disabled = false } = props;
+        return \`
+          <div class="dashboard-select-group" data-component-type="Select">
+            \${label ? '<div class="dashboard-select-label">' + label + '</div>' : ''}
+            <select class="dashboard-select" \${disabled ? 'disabled' : ''} data-event-id="\${eventId || ''}">
+              \${options.map(opt => \`
+                <option value="\${opt.value}" \${opt.value === value ? 'selected' : ''}>
+                  \${opt.label || opt.value}
+                </option>
+              \`).join('')}
+            </select>
+          </div>
+        \`;
+      }
+      
+      // Text component
+      if (comp.type === 'Text') {
+        const { content = '', variant = 'body', align = 'left' } = props;
+        const tagName = variant === 'heading' ? 'h3' : variant === 'subheading' ? 'h4' : 'div';
+        const style = \`text-align: \${align}; color: var(--text-primary); margin: 8px 0;\`;
+        return \`<\${tagName} style="\${style}" data-component-type="Text">\${content}</\${tagName}>\`;
+      }
+      
+      // Status component
+      if (comp.type === 'Status') {
+        const { status = 'info', message = '', showIcon = true } = props;
+        const statusClass = \`dashboard-status dashboard-status-\${status}\`;
+        const icon = showIcon ? {
+          info: 'ℹ️',
+          success: '✅',
+          warning: '⚠️',
+          error: '❌'
+        }[status] || 'ℹ️' : '';
+        return \`
+          <div class="\${statusClass}" data-component-type="Status">
+            \${icon ? '<span class="dashboard-status-icon">' + icon + '</span>' : ''}
+            <span>\${message}</span>
+          </div>
+        \`;
+      }
+      
+      // Progress component
+      if (comp.type === 'Progress') {
+        const { label = '', value = 0, max = 100, variant = 'default' } = props;
+        const percentage = Math.max(0, Math.min(100, (value / max) * 100));
+        const progressClass = \`dashboard-progress \${variant !== 'default' ? 'dashboard-progress-' + variant : ''}\`;
+        return \`
+          <div class="\${progressClass}" data-component-type="Progress">
+            <div class="dashboard-progress-label">
+              <span>\${label}</span>
+              <span>\${Math.round(percentage)}%</span>
+            </div>
+            <div class="dashboard-progress-bar">
+              <div class="dashboard-progress-fill" style="width: \${percentage}%"></div>
+            </div>
+          </div>
+        \`;
+      }
+      
+      // Table component
+      if (comp.type === 'Table') {
+        const { columns = [], data = [], pagination = false, pageSize = 10 } = props;
+        const displayData = pagination ? data.slice(0, pageSize) : data;
+        return \`
+          <div class="dashboard-table-container" data-component-type="Table">
+            <table class="dashboard-table">
+              <thead>
+                <tr>
+                  \${columns.map(col => \`<th>\${col}</th>\`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                \${displayData.map((row, i) => \`
+                  <tr>
+                    \${columns.map(col => \`<td>\${formatValue(row[col])}</td>\`).join('')}
+                  </tr>
+                \`).join('')}
+              </tbody>
+            </table>
+            \${pagination && data.length > pageSize ? \`
+              <div style="margin-top: 12px; text-align: center; color: var(--text-secondary); font-size: 14px;">
+                Showing \${pageSize} of \${data.length} rows
+              </div>
+            \` : ''}
+          </div>
+        \`;
+      }
+      
+      // Card component
+      if (comp.type === 'Card') {
+        const { title = '', content = '', actions = [] } = props;
+        return \`
+          <div class="dashboard-card" data-component-type="Card">
+            \${title ? '<div class="dashboard-card-title">' + title + '</div>' : ''}
+            \${content ? '<div class="dashboard-card-content">' + content + '</div>' : ''}
+            \${actions.length > 0 ? \`
+              <div class="dashboard-card-actions">
+                \${actions.map(action => \`
+                  <button class="dashboard-btn dashboard-btn-secondary" data-event-id="\${action.eventId || ''}">
+                    \${action.label || 'Action'}
+                  </button>
+                \`).join('')}
+              </div>
+            \` : ''}
+          </div>
+        \`;
+      }
+      
+      // Chart component (simple visualization)
+      if (comp.type === 'Chart') {
+        const { type = 'bar', data = {}, options = {} } = props;
+        const chartId = \`chart_\${Date.now()}_\${Math.random().toString(36).substr(2, 9)}\`;
+        return \`
+          <div class="dashboard-chart" data-component-type="Chart" data-chart-type="\${type}" id="\${chartId}">
+            <div class="dashboard-chart-title">\${type.charAt(0).toUpperCase() + type.slice(1)} Chart</div>
+            <div class="dashboard-chart-container">
+              <!-- Chart will be rendered here -->
+              <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-secondary);">
+                Chart: \${type} (data preview)
+              </div>
+            </div>
+          </div>
+        \`;
+      }
+      
+      // Fallback: display all props
+      return Object.entries(props).map(([key, val]) => \`
         <div style="display: flex; justify-content: space-between; padding: 2px 0;">
           <span style="color: #94a3b8;">\${key}:</span>
           <span style="font-family: monospace;">\${formatValue(val)}</span>
@@ -829,7 +1214,7 @@ module.exports = {
     // Attach event listeners to interactive components
     function attachEventListeners() {
       // Button clicks
-      document.querySelectorAll('[data-event-id]').forEach(button => {
+      document.querySelectorAll('[data-component-type="Button"][data-event-id]').forEach(button => {
         button.addEventListener('click', async (event) => {
           const eventId = button.getAttribute('data-event-id');
           if (!eventId) return;
@@ -839,31 +1224,97 @@ module.exports = {
           button.disabled = true;
           button.textContent = 'Processing...';
           
-          try {
-            const response = await fetch('/api/events/trigger', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ eventId, data: {} })
-            });
-            
-            const result = await response.json();
-            console.log('Event triggered:', result);
-            
-            // Show notification
-            const notification = document.createElement('div');
-            notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #22c55e; color: white; padding: 12px 20px; border-radius: 8px; z-index: 1000;';
-            notification.textContent = result.success ? 'Event executed successfully' : 'Event failed';
-            document.body.appendChild(notification);
-            setTimeout(() => notification.remove(), 3000);
-            
-          } catch (error) {
-            console.error('Failed to trigger event:', error);
-          } finally {
-            button.disabled = false;
-            button.textContent = originalText;
-          }
+          await triggerEvent(eventId, {});
+          
+          button.disabled = false;
+          button.textContent = originalText;
         });
       });
+      
+      // Switch toggle events
+      document.querySelectorAll('[data-component-type="Switch"] input[data-event-id]').forEach(switchInput => {
+        switchInput.addEventListener('change', async (event) => {
+          const eventId = switchInput.getAttribute('data-event-id');
+          if (!eventId) return;
+          
+          await triggerEvent(eventId, { checked: switchInput.checked });
+        });
+      });
+      
+      // Input change events (with debounce)
+      document.querySelectorAll('[data-component-type="Input"] input[data-event-id]').forEach(input => {
+        let timeoutId;
+        input.addEventListener('input', (event) => {
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(async () => {
+            const eventId = input.getAttribute('data-event-id');
+            if (!eventId) return;
+            
+            await triggerEvent(eventId, { value: input.value, type: input.type });
+          }, 300); // Debounce 300ms
+        });
+      });
+      
+      // Select change events
+      document.querySelectorAll('[data-component-type="Select"] select[data-event-id]').forEach(select => {
+        select.addEventListener('change', async (event) => {
+          const eventId = select.getAttribute('data-event-id');
+          if (!eventId) return;
+          
+          await triggerEvent(eventId, { value: select.value, selectedIndex: select.selectedIndex });
+        });
+      });
+      
+      // Card action buttons
+      document.querySelectorAll('[data-component-type="Card"] [data-event-id]').forEach(button => {
+        button.addEventListener('click', async (event) => {
+          const eventId = button.getAttribute('data-event-id');
+          if (!eventId) return;
+          
+          const originalText = button.textContent;
+          button.disabled = true;
+          button.textContent = 'Processing...';
+          
+          await triggerEvent(eventId, {});
+          
+          button.disabled = false;
+          button.textContent = originalText;
+        });
+      });
+    }
+    
+    // Helper function to trigger events
+    async function triggerEvent(eventId, data) {
+      try {
+        const response = await fetch('/api/events/trigger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventId, data })
+        });
+        
+        const result = await response.json();
+        console.log('Event triggered:', result);
+        
+        // Show notification
+        const notification = document.createElement('div');
+        notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #22c55e; color: white; padding: 12px 20px; border-radius: 8px; z-index: 1000;';
+        notification.textContent = result.success ? 'Event executed successfully' : 'Event failed: ' + (result.error || 'Unknown error');
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 3000);
+        
+        return result;
+      } catch (error) {
+        console.error('Failed to trigger event:', error);
+        
+        // Show error notification
+        const notification = document.createElement('div');
+        notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #ef4444; color: white; padding: 12px 20px; border-radius: 8px; z-index: 1000;';
+        notification.textContent = 'Failed to trigger event: ' + error.message;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 3000);
+        
+        throw error;
+      }
     }
     
     // Render components to the grid
@@ -875,8 +1326,23 @@ module.exports = {
         return;
       }
       
-      grid.innerHTML = components.map(component => \`
-        <div class="component" data-mod="\${component.id}" draggable="true" id="component-\${component.id}">
+      grid.innerHTML = components.map(component => {
+        // Get layout with defaults
+        const layout = component.layout || {};
+        const x = Math.max(0, Math.min(11, layout.x || 0)); // 0-based column index (0-11)
+        const y = Math.max(0, layout.y || 0); // 0-based row index
+        const width = Math.max(1, Math.min(12 - x, layout.width || 4)); // columns span (1-12)
+        const height = Math.max(1, layout.height || 3); // rows span
+        
+        // Calculate grid position (CSS grid is 1-indexed)
+        const gridColumnStart = x + 1;
+        const gridColumnEnd = gridColumnStart + width;
+        const gridRowStart = y + 1;
+        const gridRowEnd = gridRowStart + height;
+        
+        return \`
+        <div class="component" data-mod="\${component.id}" draggable="true" id="component-\${component.id}" 
+              style="grid-column: \${gridColumnStart} / \${gridColumnEnd}; grid-row: \${gridRowStart} / \${gridRowEnd};">
           <div class="component-header">
             <div class="component-icon">\${component.icon}</div>
             <div class="component-title">\${component.displayName}</div>
@@ -899,7 +1365,8 @@ module.exports = {
             </div>
           </div>
         </div>
-      \`).join('');
+      \`;
+      }).join('');
       
       attachEventListeners();
       
@@ -1001,35 +1468,96 @@ module.exports = {
           const componentId = e.dataTransfer.getData('text/plain');
           if (!componentId) return;
           
-          // Get drop position (simplified - just log for now)
+          // Get drop position
           const rect = grid.getBoundingClientRect();
           const x = e.clientX - rect.left;
           const y = e.clientY - rect.top;
           
-          console.log('Dropped component:', componentId, 'at', x, y);
+          // Calculate grid position (12-column grid)
+          // Each column is approximately (grid width - gaps) / 12
+          const gridWidth = rect.width;
+          const gridHeight = rect.height;
+          const gap = 20; // From CSS
+          const totalGaps = 11 * gap; // 11 gaps between 12 columns
+          const columnWidth = (gridWidth - totalGaps) / 12;
           
-          // In a real implementation, update layout and save to server
-          // For now, just show a notification
-          const notification = document.createElement('div');
-          notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #22c55e; color: white; padding: 12px 20px; border-radius: 8px; z-index: 1000;';
-          notification.textContent = \`Moved \${componentId}\`;
-          document.body.appendChild(notification);
+          // Estimate row height (minmax(100px, auto) + gap)
+          const rowHeight = 120; // Approximate: 100px min height + 20px gap
           
-          setTimeout(() => notification.remove(), 2000);
+          // Calculate column index (0-based)
+          const columnIndex = Math.floor(x / (columnWidth + gap));
+          const clampedColumn = Math.max(0, Math.min(11, columnIndex));
           
-          // Save layout to server (simplified)
-          try {
-            await fetch('/api/layout/save', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                componentId,
-                position: { x, y },
-                timestamp: new Date().toISOString()
-              })
-            });
-          } catch (error) {
-            console.error('Failed to save layout:', error);
+          // Calculate row index (0-based)
+          const rowIndex = Math.floor(y / rowHeight);
+          const clampedRow = Math.max(0, rowIndex);
+          
+          // Get component element and update its position
+          const componentElem = document.getElementById('component-' + componentId);
+          if (componentElem) {
+            // Get current grid position
+            const currentColumnStyle = componentElem.style.gridColumn;
+            const currentRowStyle = componentElem.style.gridRow;
+            
+            // Parse column position
+            const columnMatch = currentColumnStyle.match(/(\d+)\s*\/\s*(\d+)/);
+            let span = 4; // default width
+            
+            if (columnMatch) {
+              const start = parseInt(columnMatch[1]);
+              const end = parseInt(columnMatch[2]);
+              span = end - start;
+            }
+            
+            // Parse current row position
+            let rowStart = 1; // default
+            let rowSpan = 3; // default height
+            
+            if (currentRowStyle) {
+              const rowMatch = currentRowStyle.match(/(\d+)\s*\/\s*(\d+)/);
+              if (rowMatch) {
+                rowStart = parseInt(rowMatch[1]);
+                const rowEnd = parseInt(rowMatch[2]);
+                rowSpan = rowEnd - rowStart;
+              }
+            }
+            
+            // Update both column and row
+            const newColumnStart = clampedColumn + 1;
+            const newColumnEnd = newColumnStart + span;
+            const newRowStart = clampedRow + 1;
+            const newRowEnd = newRowStart + rowSpan;
+            
+            componentElem.style.gridColumn = \`\${newColumnStart} / \${newColumnEnd}\`;
+            componentElem.style.gridRow = \`\${newRowStart} / \${newRowEnd}\`;
+            
+            // Show notification
+            const notification = document.createElement('div');
+            notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #22c55e; color: white; padding: 12px 20px; border-radius: 8px; z-index: 1000;';
+            notification.textContent = \`Moved \${componentId} to column \${newColumnStart}, row \${newRowStart}\`;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.remove(), 2000);
+            
+            // Save layout to server
+            try {
+              const response = await fetch('/api/layout/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  componentId,
+                  position: { x: clampedColumn, y: clampedRow },
+                  timestamp: new Date().toISOString()
+                })
+              });
+              
+              const result = await response.json();
+              if (!result.success) {
+                console.error('Failed to save layout:', result.error);
+              }
+            } catch (error) {
+              console.error('Failed to save layout:', error);
+            }
           }
         });
       }

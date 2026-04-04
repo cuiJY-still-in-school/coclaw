@@ -152,6 +152,18 @@ module.exports = {
   },
 
   /**
+   * Progress bar component
+   */
+  Progress: function(props) {
+    return this.createConfig('Progress', {
+      label: props.label || '',
+      value: props.value || 0,
+      max: props.max || 100,
+      variant: props.variant || 'default' // default, success, warning, error
+    });
+  },
+
+  /**
    * Chart component (simple)
    */
   Chart: function(props) {
