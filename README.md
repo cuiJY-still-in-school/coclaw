@@ -27,6 +27,16 @@ dashboard/
 
 ## Quick Start
 
+### Method 1: Install via roter (Recommended)
+```bash
+# Install dashboard from GitHub
+roter install github:cuiJY-still-in-school/CSIS-dashboard
+
+# Install test mod (example)
+roter install github:cuiJY-still-in-school/CSIS-dashboard/examples/test-mod
+```
+
+### Method 2: Manual Installation
 1. **Install dashboard mod**:
    ```bash
    # Copy dashboard directory to ~/.openclaw/mods/
