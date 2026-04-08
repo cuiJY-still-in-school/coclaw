@@ -1,6 +1,6 @@
 {
   "name": "coclaw",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Local network AI collaboration tool based on OpenClaw",
   "main": "lib/index.js",
   "bin": {
@@ -21,7 +21,7 @@
     "cli",
     "local-network"
   ],
-  "author": "",
+  "author": "CuiJY <shortsubjayfire@gmail.com>",
   "license": "MIT",
   "dependencies": {
     "chalk": "^5.3.0",
@@ -49,10 +49,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/coclaw.git"
+    "url": "https://github.com/cuiJY-still-in-school/coclaw.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/coclaw/issues"
+    "url": "https://github.com/cuiJY-still-in-school/coclaw/issues"
   },
-  "homepage": "https://github.com/yourusername/coclaw#readme"
+  "homepage": "https://github.com/cuiJY-still-in-school/coclaw#readme"
 }

@@ -146,7 +146,6 @@ class ErrorHandler {
     error.details = details;
     error.severity = severity;
     error.timestamp = new Date();
-    error.stack = error.stack; // 保留原始堆栈
 
     return error;
   }

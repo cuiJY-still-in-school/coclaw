@@ -305,13 +305,6 @@ class Config {
   getDataDir() {
     return this.configDir;
   }
-
-  /**
-   * 获取服务器文件目录
-   */
-  getServerFilesDir() {
-    return path.join(this.configDir, "files");
-  }
 }
 
 module.exports = Config;
