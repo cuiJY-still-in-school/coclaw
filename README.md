@@ -16,9 +16,23 @@ Coclaw 是一个基于 OpenClaw 的本地网络 AI 协作工具，支持多 Agen
 
 ### 安装
 
+#### 方法一：使用安装脚本（推荐）
+
+```bash
+# 下载并运行安装脚本
+curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/install.sh | bash
+
+# 或先下载再运行
+wget https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/install.sh
+chmod +x install.sh
+./install.sh
+```
+
+#### 方法二：手动安装
+
 ```bash
 # 克隆仓库
-git clone <repository-url>
+git clone https://github.com/cuiJY-still-in-school/coclaw.git
 cd coclaw
 
 # 安装依赖
@@ -31,10 +45,10 @@ npm install -g .
 ### 启动服务器
 
 ```bash
-# 启动服务器
+# 启动服务器（后台运行）
 coclaw server
 
-# 或使用交互模式
+# 或使用交互模式（无参数运行）
 coclaw
 ```
 
@@ -57,23 +71,28 @@ coclaw connect <server-id>
 
 ## 架构概述
 
-Coclaw 采用模块化架构，主要组件包括：
+Coclaw 采用模块化架构，基于 OpenClaw 构建，主要组件包括：
 
 ### 核心模块
 
-1. **服务器管理器 (ServerManager)**: 管理 HTTP 和 WebSocket 服务器
-2. **Agent 管理器 (AgentManager)**: 管理 Agent 注册和通信
-3. **关系管理器 (RelationshipManager)**: 处理 Agent 之间的权限和信任关系
-4. **令牌管理器 (TokenManager)**: 管理文件传输的认证令牌
-5. **错误处理器 (ErrorHandler)**: 统一的错误处理和恢复机制
-6. **性能优化器 (PerformanceOptimizer)**: 优化消息路由和文件传输性能
-7. **资源清理器 (ResourceCleaner)**: 自动清理过期资源和防止内存泄漏
+1. **CLI 界面**: 基于 Commander.js 的命令行界面
+2. **服务器管理器 (ServerManager)**: 管理 HTTP 和 WebSocket 服务器
+3. **Agent 管理器 (AgentManager)**: 管理 OpenClaw Agent 生命周期
+4. **关系管理器 (RelationshipManager)**: 处理 Agent 之间的权限配置
+5. **文件传输系统**: 基于 HTTP 的安全文件传输
+6. **服务发现模块**: UDP 广播用于局域网内服务器发现
+7. **错误处理系统**: 统一的错误处理和恢复机制
+8. **性能监控系统**: 实时监控服务器性能指标
 
-### 通信协议
+### 技术栈
 
-- **HTTP API**: RESTful API 用于文件上传下载和配置管理
-- **WebSocket**: 实时消息传递和事件通知
-- **服务发现**: UDP 广播用于局域网内服务器发现
+- **运行时**: Node.js (v14+)
+- **CLI 框架**: Commander.js
+- **Web 框架**: Express.js
+- **WebSocket**: ws 库
+- **文件操作**: fs-extra
+- **用户交互**: inquirer
+- **配置管理**: 基于 JSON 文件的配置系统
 
 ## 详细使用指南
 
@@ -441,13 +460,13 @@ coclaw/
 │   └── coclaw              # CLI 入口点
 ├── lib/
 │   ├── commands/           # CLI 命令
-│   │   ├── agent.js
-│   │   ├── server.js
-│   │   ├── create.js
-│   │   ├── list.js
-│   │   ├── connect.js
-│   │   ├── performance.js
-│   │   └── errors.js
+│   │   ├── agent.js        # Agent 操作命令
+│   │   ├── server.js       # 服务器管理命令
+│   │   ├── create.js       # 创建 Agent 命令
+│   │   ├── list.js         # 列出 Agent 命令
+│   │   ├── connect.js      # 连接服务器命令
+│   │   ├── performance.js  # 性能监控命令
+│   │   └── errors.js       # 错误监控命令
 │   ├── server-manager.js   # 服务器管理器
 │   ├── agent-manager.js    # Agent 管理器
 │   ├── relationship-manager.js # 关系管理器
@@ -459,14 +478,22 @@ coclaw/
 │   ├── ai-tools.js         # AI 工具集成
 │   ├── discovery.js        # 服务发现
 │   ├── monitoring.js       # 监控系统
-│   └── cli.js             # CLI 工具函数
-├── ui/
-│   ├── interactive.js      # 交互式 UI
-│   └── prompts.js          # 用户提示
-├── test/                   # 测试文件
+│   ├── message-system.js   # 消息系统
+│   ├── openclaw.js         # OpenClaw 集成
+│   ├── config.js           # 配置管理
+│   ├── cli.js             # CLI 工具函数
+│   └── relation-cli.js     # 关系 CLI 工具
+├── tests/                  # 测试文件
+├── ui/                    # 用户界面
+│   └── interactive.js     # 交互式 UI
+├── dist/                  # 发布包目录
+├── .github/               # GitHub 配置
+│   └── workflows/         # CI/CD 工作流
 ├── README.md              # 本文档
+├── ARCHITECTURE.md        # 架构设计文档
+├── API.md                 # API 文档
 ├── TROUBLESHOOTING.md     # 故障排除指南
-└── package.json
+└── package.json           # 项目配置
 ```
 
 ### 开发环境设置
@@ -692,21 +719,25 @@ export COCLAW_REDIS_URL=redis://localhost:6379
 
 ## 支持
 
-- 📖 文档: [README.md](README.md) 和 [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
-- 🐛 问题: [GitHub Issues](https://github.com/your-org/coclaw/issues)
-- 💬 讨论: [GitHub Discussions](https://github.com/your-org/coclaw/discussions)
-- 📧 邮件: support@coclaw.example.com
+- 📖 文档: [README.md](README.md), [ARCHITECTURE.md](ARCHITECTURE.md), [API.md](API.md), [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+- 🐛 问题: [GitHub Issues](https://github.com/cuiJY-still-in-school/coclaw/issues)
+- 📧 联系: shortsubjayfire@gmail.com
 
 ## 版本历史
 
-### v1.0.0 (2025-04-07)
+### v1.0.0 (2026-04-08)
 
-- 初始发布
-- 完整的 Agent 管理系统
-- 安全的文件传输
-- 性能监控和优化
-- 全面的错误处理
-- 详细的用户文档
+- 🎉 **初始正式发布**
+- 🏗️ **核心架构**: 基于 OpenClaw 的模块化架构
+- 🤖 **Agent 管理**: 完整的 Agent 创建、启动、停止、监控功能
+- 🔗 **服务器通信**: WebSocket 实时通信 + HTTP 文件传输
+- 🌐 **服务发现**: 局域网内自动服务器发现
+- 📊 **性能监控**: 实时性能统计和优化
+- 🛡️ **错误处理**: 统一的错误处理和恢复机制
+- 📁 **文件传输**: 安全的端到端文件传输系统
+- 🔐 **权限管理**: 基于关系的细粒度权限控制
+- 📚 **完整文档**: 详细的用户指南和 API 文档
+- 🧪 **测试覆盖**: 完整的单元测试和集成测试
 
 ---
 
