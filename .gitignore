@@ -1,0 +1,96 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build outputs
+dist/
+build/
+out/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local backup files
+coclaw-backup-*/
+
+# Other project directories (explicitly ignore everything not part of Coclaw)
+/.cache/
+/.config/
+/.coclaw/
+/.openclaw/
+/.roter/
+/CSIS/
+/backroom/
+/backroom-mod/
+/clash-verge-fixed/
+/cli-tool/
+/duky/
+/examples/
+/furtheraether/
+/internet/
+/jdk17/
+/memory/
+/mods/
+/moner/
+/openclaw-mom/
+/openclaw-mom-workspace/
+/openloth/
+/planer/
+/skills-searching/
+/supermanger/
+/undercrab/
+/worker/
+/workspace/
+
+# Personal files
+*.log
+*.tmp
+*.temp
+
+# Test files (except the actual test directory)
+!tests/
+test-*.js
+*-test.js
+
+# Documentation backup files
+*-backup.md
+*-old.md
+
+# User configuration files (ignore all dotfiles except those needed for the project)
+.*
+!/.gitignore
+!/.eslintrc.json
+!/.github/
+!/.gitattributes
+!/.editorconfig
+!/.prettierrc
+!/.prettierignore
+
+# But re-include specific project dotfiles
+!/.gitignore
+!/.eslintrc.json
+!/.github/
+!/.gitattributes
+!/.editorconfig
+!/.prettierrc
+!/.prettierignore
