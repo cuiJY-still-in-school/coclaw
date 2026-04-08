@@ -79,18 +79,8 @@ test-*.js
 # User configuration files (ignore all dotfiles except those needed for the project)
 .*
 !/.gitignore
-!/.eslintrc.json
-!/.github/
 !/.gitattributes
-!/.editorconfig
-!/.prettierrc
-!/.prettierignore
 
-# But re-include specific project dotfiles
-!/.gitignore
-!/.eslintrc.json
-!/.github/
-!/.gitattributes
-!/.editorconfig
-!/.prettierrc
-!/.prettierignore
+# Project configuration files are now in coclaw/ directory
+# !/.eslintrc.json - moved to coclaw/
+# !/.github/ - moved to coclaw/.github/

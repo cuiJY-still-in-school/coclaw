@@ -20,10 +20,10 @@ Coclaw 是一个基于 OpenClaw 的本地网络 AI 协作工具，支持多 Agen
 
 ```bash
 # 下载并运行安装脚本
-curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh | bash
 
 # 或先下载再运行
-wget https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/install.sh
+wget https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh
 chmod +x install.sh
 ./install.sh
 ```
@@ -33,7 +33,7 @@ chmod +x install.sh
 ```bash
 # 克隆仓库
 git clone https://github.com/cuiJY-still-in-school/coclaw.git
-cd coclaw
+cd coclaw/coclaw
 
 # 安装依赖
 npm install
@@ -45,6 +45,9 @@ npm install -g .
 ### 启动服务器
 
 ```bash
+# 进入项目目录
+cd coclaw
+
 # 启动服务器（后台运行）
 coclaw server
 
@@ -455,7 +458,7 @@ POST   /api/relationships/import
 ### 项目结构
 
 ```
-coclaw/
+coclaw/                    # Coclaw 项目目录
 ├── bin/
 │   └── coclaw              # CLI 入口点
 ├── lib/
@@ -489,10 +492,15 @@ coclaw/
 ├── dist/                  # 发布包目录
 ├── .github/               # GitHub 配置
 │   └── workflows/         # CI/CD 工作流
-├── README.md              # 本文档
 ├── ARCHITECTURE.md        # 架构设计文档
 ├── API.md                 # API 文档
 ├── TROUBLESHOOTING.md     # 故障排除指南
+├── CHANGELOG.md           # 更新日志
+├── CONTRIBUTING.md        # 贡献指南
+├── QUICKSTART.md          # 快速开始指南
+├── install.sh             # 安装脚本
+├── package-release.sh     # 发布打包脚本
+├── create_github_release.sh # GitHub Release 创建脚本
 └── package.json           # 项目配置
 ```
 
@@ -500,8 +508,8 @@ coclaw/
 
 ```bash
 # 克隆项目
-git clone <repository-url>
-cd coclaw
+git clone https://github.com/cuiJY-still-in-school/coclaw.git
+cd coclaw/coclaw
 
 # 安装依赖
 npm install
@@ -719,7 +727,7 @@ export COCLAW_REDIS_URL=redis://localhost:6379
 
 ## 支持
 
-- 📖 文档: [README.md](README.md), [ARCHITECTURE.md](ARCHITECTURE.md), [API.md](API.md), [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+- 📖 文档: [README.md](README.md), [架构设计](coclaw/ARCHITECTURE.md), [API 文档](coclaw/API.md), [故障排除](coclaw/TROUBLESHOOTING.md)
 - 🐛 问题: [GitHub Issues](https://github.com/cuiJY-still-in-school/coclaw/issues)
 - 📧 联系: shortsubjayfire@gmail.com
 
