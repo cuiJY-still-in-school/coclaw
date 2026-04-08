@@ -9,8 +9,8 @@
   "scripts": {
     "start": "node bin/coclaw",
     "dev": "node --watch bin/coclaw",
-    "test": "jest",
-    "lint": "eslint .",
+    "test": "jest --config jest.config.js",
+    "lint": "eslint . --ignore-path .gitignore",
     "format": "prettier --write ."
   },
   "keywords": [
