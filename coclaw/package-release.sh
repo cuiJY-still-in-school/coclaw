@@ -116,10 +116,20 @@ cleanup() {
         rm -rf tmp_build
     fi
     
+    log_success "清理完成"
+}
+
+# 清理旧的发布包（仅在开始时调用）
+cleanup_old_packages() {
+    log "清理旧的发布包..."
+    
     # 删除旧的发布包
     if [ "$DRY_RUN" != true ]; then
         rm -f dist/coclaw-*.tar.gz
+        rm -f dist/coclaw-*.tar.gz.sha256
         rm -f dist/coclaw-*.zip
+        rm -f dist/coclaw-*.zip.sha256
+        rm -f dist/RELEASE-*.md
     fi
     
     log_success "清理完成"
@@ -517,7 +527,7 @@ main() {
     check_dependencies
     
     # 清理旧文件
-    cleanup
+    cleanup_old_packages
     
     # 准备构建目录
     prepare_build_dir "$VERSION"
