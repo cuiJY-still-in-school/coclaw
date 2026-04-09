@@ -107,14 +107,14 @@ safe_exec() {
     if need_sudo "/usr/local"; then
         log_debug "需要 sudo 权限执行: $cmd"
         if sudo -n true 2>/dev/null; then
-            sudo $cmd
+            sudo bash -c "$cmd"
         else
             log_info "需要输入密码以继续..."
-            sudo $cmd
+            sudo bash -c "$cmd"
         fi
     else
         log_debug "无需 sudo 执行: $cmd"
-        $cmd
+        bash -c "$cmd"
     fi
 }
 
