@@ -401,7 +401,7 @@ install_coclaw() {
         log_info "下载核心库文件..."
         
         # 下载主要的库文件
-        for file in "lib/index.js" "lib/cli.js" "lib/commands/index.js" "lib/commands/start.js" "lib/commands/create.js" "lib/commands/list.js" "lib/commands/help.js" "lib/commands/server.js" "lib/commands/agent.js" "lib/utils/logger.js" "lib/utils/config.js" "lib/utils/network.js"; do
+        for file in "lib/index.js" "lib/cli.js" "lib/config.js" "lib/commands/index.js" "lib/commands/start.js" "lib/commands/create.js" "lib/commands/list.js" "lib/commands/help.js" "lib/commands/server.js" "lib/commands/agent.js" "lib/utils/logger.js" "lib/utils/network.js"; do
             filename=$(basename "$file")
             dirname=$(dirname "$file")
             safe_exec "mkdir -p '$INSTALL_DIR/$dirname'" "创建目录 $dirname"
