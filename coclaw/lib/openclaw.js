@@ -226,23 +226,136 @@ class OpenClaw {
    */
   async interactiveChat(sessionId, thinking, env) {
     const readline = require("readline");
-
+    
     // 检查 stdin 是否可交互
     if (!process.stdin.isTTY) {
       cli.warn("标准输入不可交互，使用简单模式");
       return this.simpleChat(sessionId, thinking, env);
     }
 
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
+    cli.debug(`创建 readline 接口，isTTY: ${process.stdin.isTTY}`);
+    
+    return new Promise((resolve, reject) => {
+      try {
+        const rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout,
+          prompt: "你: "
+        });
+
+        cli.info("进入交互式聊天模式");
+        cli.info("输入 /exit 退出聊天");
+        cli.info("输入 /help 查看帮助");
+        cli.info("按 Ctrl+C 退出");
+        
+        // 发送初始问候
+        const sendMessage = async (message) => {
+          const args = ["agent"];
+          args.push("--session-id", sessionId);
+          args.push("--message", message);
+          args.push("--thinking", thinking);
+
+          try {
+            await this.execute(args, {
+              env,
+              captureOutput: false,
+              showOutput: true,
+            });
+          } catch (error) {
+            cli.debug(`发送消息失败: ${error.message}`);
+          }
+        };
+
+        // 发送初始问候
+        sendMessage("你好！").then(() => {
+          rl.prompt();
+        }).catch(() => {
+          rl.prompt();
+        });
+
+        // 处理用户输入
+        rl.on('line', async (line) => {
+          const userMessage = line.trim();
+
+          // 检查退出命令
+          if (userMessage === "/exit") {
+            cli.info("退出聊天");
+            rl.close();
+            resolve();
+            return;
+          }
+
+          if (userMessage === "/help") {
+            cli.info("可用命令:");
+            cli.info("  /exit - 退出聊天");
+            cli.info("  /help - 显示帮助");
+            rl.prompt();
+            return;
+          }
+
+          if (userMessage === "") {
+            rl.prompt();
+            return;
+          }
+
+          // 发送用户消息
+          await sendMessage(userMessage);
+          rl.prompt();
+        });
+
+        // 处理关闭
+        rl.on('close', () => {
+          cli.info("聊天已结束");
+          resolve();
+        });
+
+        // 处理错误
+        rl.on('error', (error) => {
+          cli.error(`聊天错误: ${error.message}`);
+          reject(error);
+        });
+
+      } catch (error) {
+        cli.error(`交互式聊天初始化失败: ${error.message}`);
+        cli.warn("回退到简单聊天模式");
+        this.simpleChat(sessionId, thinking, env).then(resolve).catch(reject);
+      }
     });
+  }
 
-    cli.info("进入交互式聊天模式");
-    cli.info("输入 /exit 退出聊天");
-    cli.info("输入 /help 查看帮助");
-    cli.info("按 Ctrl+C 退出");
+    cli.debug(`创建 readline 接口，isTTY: ${process.stdin.isTTY}`);
 
+    try {
+      const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+        prompt: "你: ",
+      });
+
+      cli.info("进入交互式聊天模式");
+      cli.info("输入 /exit 退出聊天");
+      cli.info("输入 /help 查看帮助");
+      cli.info("按 Ctrl+C 退出");
+
+      // 设置提示符
+      rl.setPrompt("你: ");
+
+      return await this._interactiveChatLoop(rl, sessionId, thinking, env);
+    } catch (error) {
+      cli.error(`交互式聊天初始化失败: ${error.message}`);
+      cli.warn("回退到简单聊天模式");
+      return this.simpleChat(sessionId, thinking, env);
+    }
+  }
+
+  /**
+   * 交互式聊天循环
+   * @param {Object} rl - readline 接口
+   * @param {string} sessionId - 会话 ID
+   * @param {string} thinking - 思考级别
+   * @param {Object} env - 环境变量
+   */
+  async _interactiveChatLoop(rl, sessionId, thinking, env) {
     // 发送初始问候
     const initialArgs = ["agent"];
     initialArgs.push("--session-id", sessionId);
@@ -263,9 +376,67 @@ class OpenClaw {
     // 交互式循环
     while (true) {
       try {
+        // 显示提示符
+        rl.prompt();
+        
+        cli.debug("等待用户输入...");
         const userMessage = await new Promise((resolve) => {
-          rl.question("\n你: ", resolve);
+          rl.once('line', resolve);
         });
+        cli.debug(`用户输入: "${userMessage}"`);
+
+        // 检查退出命令
+        if (userMessage.trim() === "/exit") {
+          cli.info("退出聊天");
+          rl.close();
+          break;
+        }
+
+        if (userMessage.trim() === "/help") {
+          cli.info("可用命令:");
+          cli.info("  /exit - 退出聊天");
+          cli.info("  /help - 显示帮助");
+          continue;
+        }
+
+        if (userMessage.trim() === "") {
+          continue;
+        }
+
+        // 发送用户消息
+        const args = ["agent"];
+        args.push("--session-id", sessionId);
+        args.push("--message", userMessage);
+        args.push("--thinking", thinking);
+
+        await this.execute(args, {
+          env,
+          captureOutput: false,
+          showOutput: true,
+        });
+      } catch (error) {
+        if (error.message.includes("SIGINT") || error.message.includes("Ctrl+C")) {
+          cli.info("聊天已退出");
+          rl.close();
+          break;
+        } else {
+          cli.error(`聊天错误: ${error.message}`);
+          // 继续聊天
+        }
+      }
+    }
+    
+    rl.close();
+  }
+
+    // 交互式循环
+    while (true) {
+      try {
+        cli.debug("等待用户输入...");
+        const userMessage = await new Promise((resolve) => {
+          rl.question("", resolve);
+        });
+        cli.debug(`用户输入: "${userMessage}"`);
 
         // 检查退出命令
         if (userMessage.trim() === "/exit") {
