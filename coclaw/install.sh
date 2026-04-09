@@ -317,6 +317,11 @@ install_coclaw() {
     local INSTALL_DIR=""
     local BIN_DIR=""
     
+    # 根据选项确定安装模式
+    if [ "$LOCAL_INSTALL" = true ]; then
+        INSTALL_MODE="local"
+    fi
+    
     # 确定安装目录
     if [ "$INSTALL_MODE" = "global" ]; then
         INSTALL_DIR="/usr/local/lib/coclaw"
