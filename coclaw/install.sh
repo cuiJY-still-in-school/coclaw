@@ -639,20 +639,7 @@ show_help() {
 # ============================================================================
 
 main() {
-    # 检查是否需要 sudo
-    if [ "$EUID" -ne 0 ]; then
-        echo "❌ 错误: 此安装脚本需要 root 权限"
-        echo ""
-        echo "请使用 sudo 运行:"
-        echo "  sudo ./install.sh"
-        echo ""
-        echo "或使用以下方式:"
-        echo "  curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh | sudo bash"
-        echo ""
-        exit 1
-    fi
-    
-    # 解析命令行参数
+    # 解析命令行参数（先解析帮助和版本，不需要 root 权限）
     local SKIP_OPENCLAW=false
     local LOCAL_INSTALL=false
     local UNINSTALL=false
@@ -691,6 +678,19 @@ main() {
                 ;;
         esac
     done
+    
+    # 检查是否需要 sudo（除了帮助和版本命令）
+    if [ "$EUID" -ne 0 ]; then
+        echo "❌ 错误: 此安装脚本需要 root 权限"
+        echo ""
+        echo "请使用 sudo 运行:"
+        echo "  sudo ./install.sh"
+        echo ""
+        echo "或使用以下方式:"
+        echo "  curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh | sudo bash"
+        echo ""
+        exit 1
+    fi
     
     # 显示欢迎信息
     show_welcome
