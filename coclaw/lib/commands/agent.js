@@ -112,7 +112,6 @@ async function chatWithAgent(agentManager, agentId) {
     await openclaw.chat({
       configPath: configPath,
       stateDir: stateDir,
-      agentId: agentId,
       // 不传递 message 参数，让 OpenClaw 进入交互模式
     });
   } catch (error) {

@@ -191,14 +191,14 @@ class OpenClaw {
       thinking = "medium",
       configPath = null,
       stateDir = null,
-      agentId = null,
+      sessionId = "coclaw-chat", // 默认会话 ID
     } = options;
 
     const args = ["agent"];
 
-    if (agentId) {
-      args.push("--agent", agentId);
-    }
+    // 使用会话 ID 而不是 agent ID
+    // OpenClaw 需要 --session-id, --to, 或 --agent 参数
+    args.push("--session-id", sessionId);
 
     if (message) {
       args.push("--message", message);
