@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================================
-# Coclaw 安装脚本 v2.3
+# Coclaw 安装脚本 v2.4
 # 支持 macOS 和 Linux 系统
 # 作者: CuiJY (shortsubjayfire@gmail.com)
 # GitHub: https://github.com/cuiJY-still-in-school/coclaw
@@ -390,7 +390,10 @@ install_coclaw() {
         exec_cmd "mkdir -p '$INSTALL_DIR/ui'" "创建 UI 目录"
         for file in "ui/interactive.js" "ui/prompts.js" "ui/index.js"; do
             filename=$(basename "$file")
-            exec_cmd "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "下载 $filename" || true
+            if ! exec_cmd "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "下载 $filename"; then
+                log_warn "无法下载 $filename，尝试备用方式..."
+                exec_cmd "curl -s 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "尝试备用方式下载 $filename" || true
+            fi
         done
         
         # 下载模板文件
@@ -427,6 +430,42 @@ install_coclaw() {
     else
         log_error "npm 依赖安装失败"
         exit 1
+    fi
+    
+    # 验证关键文件是否存在
+    log_info "验证安装文件..."
+    CRITICAL_FILES=(
+        "bin/coclaw"
+        "ui/interactive.js"
+        "ui/prompts.js"
+        "ui/index.js"
+        "lib/index.js"
+        "lib/cli.js"
+        "lib/agent-manager.js"
+        "lib/openclaw.js"
+        "lib/commands/agent.js"
+        "lib/commands/create.js"
+        "lib/commands/server.js"
+    )
+    
+    missing_files=0
+    for file in "${CRITICAL_FILES[@]}"; do
+        if [ ! -f "$INSTALL_DIR/$file" ]; then
+            log_warn "关键文件缺失: $file"
+            missing_files=$((missing_files + 1))
+            
+            # 尝试重新下载缺失的文件
+            log_info "尝试重新下载 $file..."
+            dirname=$(dirname "$INSTALL_DIR/$file")
+            mkdir -p "$dirname"
+            curl -s -L "https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file" -o "$INSTALL_DIR/$file" || true
+        fi
+    done
+    
+    if [ $missing_files -eq 0 ]; then
+        log_success "所有关键文件验证通过"
+    else
+        log_warn "有 $missing_files 个关键文件缺失，已尝试重新下载"
     fi
 }
 
@@ -665,7 +704,7 @@ main() {
                 exit 0
                 ;;
             -v|--version)
-                echo "Coclaw 安装脚本 v2.3"
+                echo "Coclaw 安装脚本 v2.4"
                 exit 0
                 ;;
             -d|--debug)
