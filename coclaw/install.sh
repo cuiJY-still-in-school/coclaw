@@ -303,29 +303,69 @@ install_coclaw() {
     safe_exec "mkdir -p $INSTALL_DIR/templates" "创建 templates 目录"
     safe_exec "mkdir -p $INSTALL_DIR/tests" "创建 tests 目录"
     
-    # 复制文件
-    log_info "复制文件..."
+    # 下载或复制文件
+    log_info "获取 Coclaw 文件..."
     
-    # 复制 package.json
-    cp package.json "$INSTALL_DIR/"
+    # 检查是否在 Coclaw 项目目录中
+    if [ -f "package.json" ] && [ -d "lib" ] && [ -d "bin" ]; then
+        # 在项目目录中，直接复制文件
+        log_info "从本地项目目录复制文件..."
+        cp package.json "$INSTALL_DIR/"
+    else
+        # 不在项目目录中，从 GitHub 下载
+        log_info "从 GitHub 仓库下载文件..."
+        
+        # 下载 package.json
+        curl -s -L "https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/package.json" -o "$INSTALL_DIR/package.json"
+        
+        # 下载 bin/coclaw
+        curl -s -L "https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/bin/coclaw" -o "$INSTALL_DIR/bin/coclaw"
+        chmod +x "$INSTALL_DIR/bin/coclaw"
+        
+        # 创建必要的目录结构
+        mkdir -p "$INSTALL_DIR/lib"
+        mkdir -p "$INSTALL_DIR/ui"
+        mkdir -p "$INSTALL_DIR/templates"
+        
+        # 标记为从远程安装
+        echo "installed_from=remote" > "$INSTALL_DIR/.install_source"
+    fi
     
-    # 复制 README 和文档
-    cp README.md "$INSTALL_DIR/" 2>/dev/null || true
-    cp TROUBLESHOOTING.md "$INSTALL_DIR/" 2>/dev/null || true
-    cp QUICKSTART.md "$INSTALL_DIR/" 2>/dev/null || true
-    
-    # 复制 bin 文件
-    cp bin/coclaw "$INSTALL_DIR/bin/"
-    chmod +x "$INSTALL_DIR/bin/coclaw"
-    
-    # 复制 lib 目录
-    cp -r lib/* "$INSTALL_DIR/lib/" 2>/dev/null || true
-    
-    # 复制 ui 目录
-    cp -r ui/* "$INSTALL_DIR/ui/" 2>/dev/null || true
-    
-    # 复制 templates 目录
-    cp -r templates/* "$INSTALL_DIR/templates/" 2>/dev/null || true
+    # 如果是本地安装，复制其他文件
+    if [ -f "package.json" ] && [ -d "lib" ] && [ -d "bin" ]; then
+        # 复制 README 和文档
+        cp README.md "$INSTALL_DIR/" 2>/dev/null || true
+        cp TROUBLESHOOTING.md "$INSTALL_DIR/" 2>/dev/null || true
+        cp QUICKSTART.md "$INSTALL_DIR/" 2>/dev/null || true
+        
+        # 复制 lib 目录
+        cp -r lib/* "$INSTALL_DIR/lib/" 2>/dev/null || true
+        
+        # 复制 ui 目录
+        cp -r ui/* "$INSTALL_DIR/ui/" 2>/dev/null || true
+        
+        # 复制 templates 目录
+        cp -r templates/* "$INSTALL_DIR/templates/" 2>/dev/null || true
+    else
+        # 远程安装，只下载核心文件
+        log_info "下载核心库文件..."
+        
+        # 下载主要的库文件
+        for file in "lib/index.js" "lib/commands/index.js" "lib/commands/start.js" "lib/commands/create.js" "lib/commands/list.js" "lib/commands/help.js"; do
+            filename=$(basename "$file")
+            dirname=$(dirname "$file")
+            mkdir -p "$INSTALL_DIR/$dirname"
+            curl -s -L "https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file" -o "$INSTALL_DIR/$file" 2>/dev/null || true
+        done
+        
+        # 创建基本的 UI 目录结构
+        mkdir -p "$INSTALL_DIR/ui"
+        echo "// UI components placeholder" > "$INSTALL_DIR/ui/index.js"
+        
+        # 创建基本的 templates 目录
+        mkdir -p "$INSTALL_DIR/templates"
+        echo "# Template files" > "$INSTALL_DIR/templates/README.md"
+    fi
     
     # 创建符号链接
     log_info "创建符号链接..."
