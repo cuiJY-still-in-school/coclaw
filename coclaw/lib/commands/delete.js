@@ -48,8 +48,13 @@ async function run(agentId, force = false) {
         const shouldStop = await cli.confirm("是否先停止 Agent？ (Y/n)");
         if (shouldStop) {
           cli.info(`正在停止 Agent "${agentId}"...`);
-          await agentManager.stopAgent(agentId);
-          cli.success(`Agent "${agentId}" 已停止`);
+          try {
+            await agentManager.stopAgent(agentId);
+            cli.success(`Agent "${agentId}" 已停止`);
+          } catch (stopError) {
+            cli.warn(`停止 Agent 失败: ${stopError.message}`);
+            cli.warn("将继续尝试删除 Agent 目录...");
+          }
         } else {
           cli.error("无法删除正在运行的 Agent");
           cli.info("请先停止 Agent 或使用 --force 参数强制删除");
@@ -57,8 +62,13 @@ async function run(agentId, force = false) {
         }
       } else {
         cli.info(`强制停止 Agent "${agentId}"...`);
-        await agentManager.stopAgent(agentId);
-        cli.success(`Agent "${agentId}" 已停止`);
+        try {
+          await agentManager.stopAgent(agentId);
+          cli.success(`Agent "${agentId}" 已停止`);
+        } catch (stopError) {
+          cli.warn(`停止 Agent 失败: ${stopError.message}`);
+          cli.warn("将继续尝试删除 Agent 目录...");
+        }
       }
     }
 
