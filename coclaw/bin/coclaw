@@ -8,7 +8,7 @@ const InteractiveUI = require('../ui/interactive');
 program
   .name('coclaw')
   .description('Local network AI collaboration tool based on OpenClaw')
-  .version(version, '-V, --version')
+  .version(version, '-v, -V, --version')
   .helpOption('-H, --help', '显示帮助信息');
 
 // 基础命令

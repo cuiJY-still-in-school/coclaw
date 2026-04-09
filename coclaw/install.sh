@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================================
-# Coclaw 安装脚本 v2.1
+# Coclaw 安装脚本 v2.2
 # 支持 macOS 和 Linux 系统
 # 作者: CuiJY (shortsubjayfire@gmail.com)
 # GitHub: https://github.com/cuiJY-still-in-school/coclaw
@@ -378,7 +378,11 @@ install_coclaw() {
             filename=$(basename "$file")
             dirname=$(dirname "$file")
             exec_cmd "mkdir -p '$INSTALL_DIR/$dirname'" "创建目录 $dirname"
-            exec_cmd "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "下载 $filename" || log_warn "无法下载 $filename"
+            if ! exec_cmd "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "下载 $filename"; then
+                log_warn "无法下载 $filename"
+                # 尝试备用下载方式
+                exec_cmd "curl -s 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "尝试备用方式下载 $filename" || true
+            fi
         done
         
         # 下载 UI 文件
@@ -652,7 +656,7 @@ main() {
                 exit 0
                 ;;
             -v|--version)
-                echo "Coclaw 安装脚本 v2.1"
+                echo "Coclaw 安装脚本 v2.2"
                 exit 0
                 ;;
             -d|--debug)
