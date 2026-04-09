@@ -316,11 +316,11 @@ install_coclaw() {
         log_info "从 GitHub 仓库下载文件..."
         
         # 下载 package.json
-        curl -s -L "https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/package.json" -o "$INSTALL_DIR/package.json"
+        safe_exec "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/package.json' -o '$INSTALL_DIR/package.json'" "下载 package.json"
         
         # 下载 bin/coclaw
-        curl -s -L "https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/bin/coclaw" -o "$INSTALL_DIR/bin/coclaw"
-        chmod +x "$INSTALL_DIR/bin/coclaw"
+        safe_exec "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/bin/coclaw' -o '$INSTALL_DIR/bin/coclaw'" "下载 coclaw 可执行文件"
+        safe_exec "chmod +x '$INSTALL_DIR/bin/coclaw'" "设置可执行权限"
         
         # 创建必要的目录结构
         mkdir -p "$INSTALL_DIR/lib"
@@ -354,8 +354,8 @@ install_coclaw() {
         for file in "lib/index.js" "lib/commands/index.js" "lib/commands/start.js" "lib/commands/create.js" "lib/commands/list.js" "lib/commands/help.js"; do
             filename=$(basename "$file")
             dirname=$(dirname "$file")
-            mkdir -p "$INSTALL_DIR/$dirname"
-            curl -s -L "https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file" -o "$INSTALL_DIR/$file" 2>/dev/null || true
+            safe_exec "mkdir -p '$INSTALL_DIR/$dirname'" "创建目录 $dirname"
+            safe_exec "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "下载 $filename" || true
         done
         
         # 创建基本的 UI 目录结构
