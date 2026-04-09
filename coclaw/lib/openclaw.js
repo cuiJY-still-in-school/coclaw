@@ -194,34 +194,243 @@ class OpenClaw {
       sessionId = "coclaw-chat", // 默认会话 ID
     } = options;
 
-    const args = ["agent"];
-
-    // 使用会话 ID 而不是 agent ID
-    // OpenClaw 需要 --session-id, --to, 或 --agent 参数
-    args.push("--session-id", sessionId);
-
-    if (message) {
-      args.push("--message", message);
-    } else {
-      // 如果没有消息，启动交互模式
-      args.push("--message", "开始聊天");
-    }
-
-    if (thinking) {
-      args.push("--thinking", thinking);
-    }
-
     const env = { ...process.env };
     if (configPath) env.OPENCLAW_CONFIG_PATH = configPath;
     if (stateDir) env.OPENCLAW_STATE_DIR = stateDir;
 
     cli.info("启动 OpenClaw Agent 聊天");
 
-    return this.execute(args, {
-      env,
-      captureOutput: false,
-      showOutput: true,
+    // 如果有初始消息，发送它
+    if (message) {
+      const args = ["agent"];
+      args.push("--session-id", sessionId);
+      args.push("--message", message);
+      args.push("--thinking", thinking);
+
+      return this.execute(args, {
+        env,
+        captureOutput: false,
+        showOutput: true,
+      });
+    } else {
+      // 进入交互模式
+      return this.interactiveChat(sessionId, thinking, env);
+    }
+  }
+
+  /**
+   * 交互式聊天
+   * @param {string} sessionId - 会话 ID
+   * @param {string} thinking - 思考级别
+   * @param {Object} env - 环境变量
+   */
+  async interactiveChat(sessionId, thinking, env) {
+    const readline = require("readline");
+    
+    // 检查 stdin 是否可交互
+    if (!process.stdin.isTTY) {
+      cli.warn("标准输入不可交互，使用简单模式");
+      return this.simpleChat(sessionId, thinking, env);
+    }
+
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
     });
+
+    cli.info("进入交互式聊天模式");
+    cli.info("输入 /exit 退出聊天");
+    cli.info("输入 /help 查看帮助");
+    cli.info("按 Ctrl+C 退出");
+
+    // 发送初始问候
+    const initialArgs = ["agent"];
+    initialArgs.push("--session-id", sessionId);
+    initialArgs.push("--message", "你好！");
+    initialArgs.push("--thinking", thinking);
+
+    try {
+      await this.execute(initialArgs, {
+        env,
+        captureOutput: false,
+        showOutput: true,
+      });
+    } catch (error) {
+      // 忽略初始问候的错误，继续聊天
+      cli.debug(`初始问候失败: ${error.message}`);
+    }
+
+    // 交互式循环
+    while (true) {
+      try {
+        const userMessage = await new Promise((resolve) => {
+          rl.question("\n你: ", resolve);
+        });
+
+        // 检查退出命令
+        if (userMessage.trim() === "/exit") {
+          cli.info("退出聊天");
+          rl.close();
+          break;
+        }
+
+        if (userMessage.trim() === "/help") {
+          cli.info("可用命令:");
+          cli.info("  /exit - 退出聊天");
+          cli.info("  /help - 显示帮助");
+          continue;
+        }
+
+        if (userMessage.trim() === "") {
+          continue;
+        }
+
+        // 发送用户消息
+        const args = ["agent"];
+        args.push("--session-id", sessionId);
+        args.push("--message", userMessage);
+        args.push("--thinking", thinking);
+
+        await this.execute(args, {
+          env,
+          captureOutput: false,
+          showOutput: true,
+        });
+      } catch (error) {
+        if (error.message.includes("SIGINT") || error.message.includes("Ctrl+C")) {
+          cli.info("聊天已退出");
+          rl.close();
+          break;
+        } else {
+          cli.error(`聊天错误: ${error.message}`);
+          // 继续聊天
+        }
+      }
+    }
+  }
+
+  /**
+   * 简单聊天模式（用于非交互式环境）
+   * @param {string} sessionId - 会话 ID
+   * @param {string} thinking - 思考级别
+   * @param {Object} env - 环境变量
+   */
+  async simpleChat(sessionId, thinking, env) {
+    cli.info("进入简单聊天模式");
+    cli.info("输入消息与 AI 对话，输入 /exit 退出");
+
+    const readline = require("readline");
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    // 发送初始问候
+    const initialArgs = ["agent"];
+    initialArgs.push("--session-id", sessionId);
+    initialArgs.push("--message", "你好！");
+    initialArgs.push("--thinking", thinking);
+
+    try {
+      await this.execute(initialArgs, {
+        env,
+        captureOutput: false,
+        showOutput: true,
+      });
+    } catch (error) {
+      cli.debug(`初始问候失败: ${error.message}`);
+    }
+
+    // 逐行读取输入
+    for await (const line of rl) {
+      const userMessage = line.trim();
+
+      if (userMessage === "/exit") {
+        cli.info("退出聊天");
+        break;
+      }
+
+      if (userMessage === "/help") {
+        cli.info("可用命令:");
+        cli.info("  /exit - 退出聊天");
+        cli.info("  /help - 显示帮助");
+        continue;
+      }
+
+      if (userMessage === "") {
+        continue;
+      }
+
+      // 发送用户消息
+      const args = ["agent"];
+      args.push("--session-id", sessionId);
+      args.push("--message", userMessage);
+      args.push("--thinking", thinking);
+
+      try {
+        await this.execute(args, {
+          env,
+          captureOutput: false,
+          showOutput: true,
+        });
+      } catch (error) {
+        cli.error(`聊天错误: ${error.message}`);
+      }
+    }
+
+    rl.close();
+  }
+
+    // 交互式循环
+    while (true) {
+      try {
+        const userMessage = await new Promise((resolve) => {
+          rl.question("\n你: ", resolve);
+        });
+
+        // 检查退出命令
+        if (userMessage.trim() === "/exit") {
+          cli.info("退出聊天");
+          rl.close();
+          break;
+        }
+
+        if (userMessage.trim() === "/help") {
+          cli.info("可用命令:");
+          cli.info("  /exit - 退出聊天");
+          cli.info("  /help - 显示帮助");
+          continue;
+        }
+
+        if (userMessage.trim() === "") {
+          continue;
+        }
+
+        // 发送用户消息
+        const args = ["agent"];
+        args.push("--session-id", sessionId);
+        args.push("--message", userMessage);
+        args.push("--thinking", thinking);
+
+        await this.execute(args, {
+          env,
+          captureOutput: false,
+          showOutput: true,
+        });
+      } catch (error) {
+        if (
+          error.message.includes("SIGINT") ||
+          error.message.includes("Ctrl+C")
+        ) {
+          cli.info("聊天已退出");
+          rl.close();
+          break;
+        } else {
+          cli.error(`聊天错误: ${error.message}`);
+          // 继续聊天
+        }
+      }
+    }
   }
 
   /**
