@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================================
-# Coclaw 安装脚本 v2.0
+# Coclaw 安装脚本 v2.1
 # 支持 macOS 和 Linux 系统
 # 作者: CuiJY (shortsubjayfire@gmail.com)
 # GitHub: https://github.com/cuiJY-still-in-school/coclaw
@@ -344,11 +344,41 @@ install_coclaw() {
         log_info "下载核心库文件..."
         
         # 下载主要的库文件
-        for file in "lib/index.js" "lib/cli.js" "lib/config.js" "lib/agent-manager.js" "lib/server-manager.js" "lib/commands/index.js" "lib/commands/start.js" "lib/commands/create.js" "lib/commands/list.js" "lib/commands/help.js" "lib/commands/server.js" "lib/commands/agent.js" "lib/utils/logger.js" "lib/utils/network.js"; do
+        log_info "下载核心库文件..."
+        
+        # 下载所有 lib 目录中的 JS 文件
+        lib_files=(
+            "lib/index.js"
+            "lib/agent-manager.js"
+            "lib/ai-tools.js"
+            "lib/cli.js"
+            "lib/config.js"
+            "lib/discovery.js"
+            "lib/error-handler.js"
+            "lib/message-system.js"
+            "lib/monitoring.js"
+            "lib/openclaw.js"
+            "lib/performance-optimizer.js"
+            "lib/relation-cli.js"
+            "lib/relationship-manager.js"
+            "lib/resource-cleaner.js"
+            "lib/server-connector.js"
+            "lib/server-manager.js"
+            "lib/token-manager.js"
+            "lib/commands/agent.js"
+            "lib/commands/connect.js"
+            "lib/commands/create.js"
+            "lib/commands/errors.js"
+            "lib/commands/list.js"
+            "lib/commands/performance.js"
+            "lib/commands/server.js"
+        )
+        
+        for file in "${lib_files[@]}"; do
             filename=$(basename "$file")
             dirname=$(dirname "$file")
             exec_cmd "mkdir -p '$INSTALL_DIR/$dirname'" "创建目录 $dirname"
-            exec_cmd "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "下载 $filename" || true
+            exec_cmd "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "下载 $filename" || log_warn "无法下载 $filename"
         done
         
         # 下载 UI 文件
@@ -635,7 +665,7 @@ main() {
                 exit 0
                 ;;
             -v|--version)
-                echo "Coclaw 安装脚本 v2.0"
+                echo "Coclaw 安装脚本 v2.1"
                 exit 0
                 ;;
             -d|--debug)

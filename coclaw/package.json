@@ -2,7 +2,7 @@
   "name": "coclaw",
   "version": "1.0.0",
   "description": "Local network AI collaboration tool based on OpenClaw",
-  "main": "lib/index.js",
+  "main": "lib/cli.js",
   "bin": {
     "coclaw": "bin/coclaw"
   },
