@@ -397,24 +397,38 @@ install_coclaw() {
         # 复制 templates 目录
         cp -r templates/* "$INSTALL_DIR/templates/" 2>/dev/null || true
     else
-        # 远程安装，只下载核心文件
+        # 远程安装，下载所有必要文件
         log_info "下载核心库文件..."
         
         # 下载主要的库文件
-        for file in "lib/index.js" "lib/commands/index.js" "lib/commands/start.js" "lib/commands/create.js" "lib/commands/list.js" "lib/commands/help.js"; do
+        for file in "lib/index.js" "lib/cli.js" "lib/commands/index.js" "lib/commands/start.js" "lib/commands/create.js" "lib/commands/list.js" "lib/commands/help.js" "lib/commands/server.js" "lib/commands/agent.js" "lib/utils/logger.js" "lib/utils/config.js" "lib/utils/network.js"; do
             filename=$(basename "$file")
             dirname=$(dirname "$file")
             safe_exec "mkdir -p '$INSTALL_DIR/$dirname'" "创建目录 $dirname"
             safe_exec "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "下载 $filename" || true
         done
         
-        # 创建基本的 UI 目录结构
-        mkdir -p "$INSTALL_DIR/ui"
-        echo "// UI components placeholder" > "$INSTALL_DIR/ui/index.js"
+        # 下载 UI 文件
+        log_info "下载 UI 文件..."
+        safe_exec "mkdir -p '$INSTALL_DIR/ui'" "创建 UI 目录"
+        for file in "ui/interactive.js" "ui/prompts.js" "ui/index.js"; do
+            filename=$(basename "$file")
+            safe_exec "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "下载 $filename" || true
+        done
         
-        # 创建基本的 templates 目录
-        mkdir -p "$INSTALL_DIR/templates"
-        echo "# Template files" > "$INSTALL_DIR/templates/README.md"
+        # 下载模板文件
+        log_info "下载模板文件..."
+        safe_exec "mkdir -p '$INSTALL_DIR/templates'" "创建模板目录"
+        for file in "templates/agent-config.json" "templates/server-config.json"; do
+            filename=$(basename "$file")
+            safe_exec "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "下载 $filename" || true
+        done
+        
+        # 下载文档文件（可选）
+        log_info "下载文档文件..."
+        for file in "README.md" "TROUBLESHOOTING.md" "QUICKSTART.md" "API.md" "ARCHITECTURE.md" "CONTRIBUTING.md" "CHANGELOG.md"; do
+            safe_exec "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "下载 $file" || true
+        done
     fi
     
     # 创建符号链接
