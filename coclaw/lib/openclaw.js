@@ -226,7 +226,7 @@ class OpenClaw {
    */
   async interactiveChat(sessionId, thinking, env) {
     const readline = require("readline");
-    
+
     // 检查 stdin 是否可交互
     if (!process.stdin.isTTY) {
       cli.warn("标准输入不可交互，使用简单模式");
@@ -297,7 +297,10 @@ class OpenClaw {
           showOutput: true,
         });
       } catch (error) {
-        if (error.message.includes("SIGINT") || error.message.includes("Ctrl+C")) {
+        if (
+          error.message.includes("SIGINT") ||
+          error.message.includes("Ctrl+C")
+        ) {
           cli.info("聊天已退出");
           rl.close();
           break;
@@ -379,58 +382,6 @@ class OpenClaw {
     }
 
     rl.close();
-  }
-
-    // 交互式循环
-    while (true) {
-      try {
-        const userMessage = await new Promise((resolve) => {
-          rl.question("\n你: ", resolve);
-        });
-
-        // 检查退出命令
-        if (userMessage.trim() === "/exit") {
-          cli.info("退出聊天");
-          rl.close();
-          break;
-        }
-
-        if (userMessage.trim() === "/help") {
-          cli.info("可用命令:");
-          cli.info("  /exit - 退出聊天");
-          cli.info("  /help - 显示帮助");
-          continue;
-        }
-
-        if (userMessage.trim() === "") {
-          continue;
-        }
-
-        // 发送用户消息
-        const args = ["agent"];
-        args.push("--session-id", sessionId);
-        args.push("--message", userMessage);
-        args.push("--thinking", thinking);
-
-        await this.execute(args, {
-          env,
-          captureOutput: false,
-          showOutput: true,
-        });
-      } catch (error) {
-        if (
-          error.message.includes("SIGINT") ||
-          error.message.includes("Ctrl+C")
-        ) {
-          cli.info("聊天已退出");
-          rl.close();
-          break;
-        } else {
-          cli.error(`聊天错误: ${error.message}`);
-          // 继续聊天
-        }
-      }
-    }
   }
 
   /**
