@@ -9,34 +9,7 @@
 
 set -e
 
-# ============================================================================
-# 检查是否通过管道运行（sudo 密码输入问题）
-# ============================================================================
-if [ -t 0 ]; then
-    # 从终端运行，正常
-    :
-else
-    # 通过管道运行，警告用户
-    echo "⚠️  警告: 检测到通过管道运行安装脚本"
-    echo ""
-    echo "由于 sudo 密码输入的限制，通过管道运行可能无法正常工作。"
-    echo "建议使用以下方式之一:"
-    echo ""
-    echo "1. 下载后运行 (推荐):"
-    echo "   curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh -o install.sh"
-    echo "   chmod +x install.sh"
-    echo "   ./install.sh"
-    echo ""
-    echo "2. 使用 wget:"
-    echo "   wget https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh"
-    echo "   chmod +x install.sh"
-    echo "   ./install.sh"
-    echo ""
-    echo "3. 继续通过管道运行 (可能失败):"
-    echo "   按 Ctrl+C 取消，或等待 5 秒后继续..."
-    sleep 5
-    echo "继续安装..."
-fi
+
 
 # ============================================================================
 # 颜色和样式定义
@@ -117,48 +90,18 @@ get_os_info() {
     echo "$OS_NAME $OS_VERSION ($ARCH)"
 }
 
-# 检查是否需要 sudo
+# 检查是否需要 sudo（现在脚本已经以 root 运行，此函数主要用于信息提示）
 need_sudo() {
-    if [ "$EUID" -ne 0 ] && [ -w "$1" ]; then
-        return 1  # 不需要 sudo
-    else
-        return 0  # 需要 sudo
-    fi
+    return 1  # 不需要 sudo，因为脚本已经以 root 运行
 }
 
-# 安全执行命令（自动处理 sudo）
-safe_exec() {
+# 执行命令（简化版，因为脚本已经以 root 运行）
+exec_cmd() {
     local cmd="$1"
     local desc="$2"
     
     log_info "$desc..."
-    
-    if need_sudo "/usr/local"; then
-        log_debug "需要 sudo 权限执行: $cmd"
-        if sudo -n true 2>/dev/null; then
-            # sudo 不需要密码
-            sudo bash -c "$cmd"
-        else
-            # 需要 sudo 密码
-            log_info "需要输入密码以继续..."
-            if [ -t 0 ]; then
-                # 有终端，可以正常输入密码
-                sudo bash -c "$cmd"
-            else
-                # 没有终端（通过管道运行），尝试使用 sudo -S
-                log_warn "通过管道运行，尝试使用 sudo -S..."
-                echo "请手动输入 sudo 密码:" >&2
-                sudo -S bash -c "$cmd" || {
-                    log_error "sudo 密码输入失败"
-                    log_info "请尝试直接运行脚本而不是通过管道"
-                    exit 1
-                }
-            fi
-        fi
-    else
-        log_debug "无需 sudo 执行: $cmd"
-        bash -c "$cmd"
-    fi
+    bash -c "$cmd"
 }
 
 # ============================================================================
@@ -287,16 +230,16 @@ install_openclaw() {
     
     case $package_manager in
         pnpm)
-            safe_exec "pnpm add -g openclaw@latest" "使用 pnpm 安装 OpenClaw"
+            exec_cmd "pnpm add -g openclaw@latest" "使用 pnpm 安装 OpenClaw"
             ;;
         bun)
-            safe_exec "bun add -g openclaw@latest" "使用 bun 安装 OpenClaw"
+            exec_cmd "bun add -g openclaw@latest" "使用 bun 安装 OpenClaw"
             ;;
         yarn)
-            safe_exec "yarn global add openclaw@latest" "使用 yarn 安装 OpenClaw"
+            exec_cmd "yarn global add openclaw@latest" "使用 yarn 安装 OpenClaw"
             ;;
         *)
-            safe_exec "npm install -g openclaw@latest" "使用 npm 安装 OpenClaw"
+            exec_cmd "npm install -g openclaw@latest" "使用 npm 安装 OpenClaw"
             ;;
     esac
     
@@ -341,17 +284,17 @@ install_coclaw() {
     # 清理旧版本
     if [ -d "$INSTALL_DIR" ]; then
         log_info "清理旧版本..."
-        safe_exec "rm -rf $INSTALL_DIR" "删除旧版本"
+        exec_cmd "rm -rf $INSTALL_DIR" "删除旧版本"
     fi
     
     # 创建目录结构
     log_info "创建目录结构..."
-    safe_exec "mkdir -p $INSTALL_DIR" "创建安装目录"
-    safe_exec "mkdir -p $INSTALL_DIR/bin" "创建 bin 目录"
-    safe_exec "mkdir -p $INSTALL_DIR/lib" "创建 lib 目录"
-    safe_exec "mkdir -p $INSTALL_DIR/ui" "创建 ui 目录"
-    safe_exec "mkdir -p $INSTALL_DIR/templates" "创建 templates 目录"
-    safe_exec "mkdir -p $INSTALL_DIR/tests" "创建 tests 目录"
+    exec_cmd "mkdir -p $INSTALL_DIR" "创建安装目录"
+    exec_cmd "mkdir -p $INSTALL_DIR/bin" "创建 bin 目录"
+    exec_cmd "mkdir -p $INSTALL_DIR/lib" "创建 lib 目录"
+    exec_cmd "mkdir -p $INSTALL_DIR/ui" "创建 ui 目录"
+    exec_cmd "mkdir -p $INSTALL_DIR/templates" "创建 templates 目录"
+    exec_cmd "mkdir -p $INSTALL_DIR/tests" "创建 tests 目录"
     
     # 下载或复制文件
     log_info "获取 Coclaw 文件..."
@@ -360,42 +303,42 @@ install_coclaw() {
     if [ -f "package.json" ] && [ -d "lib" ] && [ -d "bin" ]; then
         # 在项目目录中，直接复制文件
         log_info "从本地项目目录复制文件..."
-        safe_exec "cp package.json '$INSTALL_DIR/'" "复制 package.json"
+        exec_cmd "cp package.json '$INSTALL_DIR/'" "复制 package.json"
     else
         # 不在项目目录中，从 GitHub 下载
         log_info "从 GitHub 仓库下载文件..."
         
         # 下载 package.json
-        safe_exec "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/package.json' -o '$INSTALL_DIR/package.json'" "下载 package.json"
+        exec_cmd "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/package.json' -o '$INSTALL_DIR/package.json'" "下载 package.json"
         
         # 下载 bin/coclaw
-        safe_exec "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/bin/coclaw' -o '$INSTALL_DIR/bin/coclaw'" "下载 coclaw 可执行文件"
-        safe_exec "chmod +x '$INSTALL_DIR/bin/coclaw'" "设置可执行权限"
+        exec_cmd "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/bin/coclaw' -o '$INSTALL_DIR/bin/coclaw'" "下载 coclaw 可执行文件"
+        exec_cmd "chmod +x '$INSTALL_DIR/bin/coclaw'" "设置可执行权限"
         
         # 创建必要的目录结构
-        safe_exec "mkdir -p '$INSTALL_DIR/lib'" "创建 lib 目录"
-        safe_exec "mkdir -p '$INSTALL_DIR/ui'" "创建 ui 目录"
-        safe_exec "mkdir -p '$INSTALL_DIR/templates'" "创建 templates 目录"
+        exec_cmd "mkdir -p '$INSTALL_DIR/lib'" "创建 lib 目录"
+        exec_cmd "mkdir -p '$INSTALL_DIR/ui'" "创建 ui 目录"
+        exec_cmd "mkdir -p '$INSTALL_DIR/templates'" "创建 templates 目录"
         
         # 标记为从远程安装
-        safe_exec "echo 'installed_from=remote' > '$INSTALL_DIR/.install_source'" "创建安装标记文件"
+        exec_cmd "echo 'installed_from=remote' > '$INSTALL_DIR/.install_source'" "创建安装标记文件"
     fi
     
     # 如果是本地安装，复制其他文件
     if [ -f "package.json" ] && [ -d "lib" ] && [ -d "bin" ]; then
         # 复制 README 和文档
-        safe_exec "cp README.md '$INSTALL_DIR/'" "复制 README.md" || true
-        safe_exec "cp TROUBLESHOOTING.md '$INSTALL_DIR/'" "复制 TROUBLESHOOTING.md" || true
-        safe_exec "cp QUICKSTART.md '$INSTALL_DIR/'" "复制 QUICKSTART.md" || true
+        exec_cmd "cp README.md '$INSTALL_DIR/'" "复制 README.md" || true
+        exec_cmd "cp TROUBLESHOOTING.md '$INSTALL_DIR/'" "复制 TROUBLESHOOTING.md" || true
+        exec_cmd "cp QUICKSTART.md '$INSTALL_DIR/'" "复制 QUICKSTART.md" || true
         
         # 复制 lib 目录
-        safe_exec "cp -r lib/* '$INSTALL_DIR/lib/'" "复制 lib 目录" || true
+        exec_cmd "cp -r lib/* '$INSTALL_DIR/lib/'" "复制 lib 目录" || true
         
         # 复制 ui 目录
-        safe_exec "cp -r ui/* '$INSTALL_DIR/ui/'" "复制 ui 目录" || true
+        exec_cmd "cp -r ui/* '$INSTALL_DIR/ui/'" "复制 ui 目录" || true
         
         # 复制 templates 目录
-        safe_exec "cp -r templates/* '$INSTALL_DIR/templates/'" "复制 templates 目录" || true
+        exec_cmd "cp -r templates/* '$INSTALL_DIR/templates/'" "复制 templates 目录" || true
     else
         # 远程安装，下载所有必要文件
         log_info "下载核心库文件..."
@@ -404,37 +347,37 @@ install_coclaw() {
         for file in "lib/index.js" "lib/cli.js" "lib/config.js" "lib/agent-manager.js" "lib/server-manager.js" "lib/commands/index.js" "lib/commands/start.js" "lib/commands/create.js" "lib/commands/list.js" "lib/commands/help.js" "lib/commands/server.js" "lib/commands/agent.js" "lib/utils/logger.js" "lib/utils/network.js"; do
             filename=$(basename "$file")
             dirname=$(dirname "$file")
-            safe_exec "mkdir -p '$INSTALL_DIR/$dirname'" "创建目录 $dirname"
-            safe_exec "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "下载 $filename" || true
+            exec_cmd "mkdir -p '$INSTALL_DIR/$dirname'" "创建目录 $dirname"
+            exec_cmd "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "下载 $filename" || true
         done
         
         # 下载 UI 文件
         log_info "下载 UI 文件..."
-        safe_exec "mkdir -p '$INSTALL_DIR/ui'" "创建 UI 目录"
+        exec_cmd "mkdir -p '$INSTALL_DIR/ui'" "创建 UI 目录"
         for file in "ui/interactive.js" "ui/prompts.js" "ui/index.js"; do
             filename=$(basename "$file")
-            safe_exec "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "下载 $filename" || true
+            exec_cmd "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "下载 $filename" || true
         done
         
         # 下载模板文件
         log_info "下载模板文件..."
-        safe_exec "mkdir -p '$INSTALL_DIR/templates'" "创建模板目录"
+        exec_cmd "mkdir -p '$INSTALL_DIR/templates'" "创建模板目录"
         for file in "templates/agent-config.json" "templates/server-config.json"; do
             filename=$(basename "$file")
-            safe_exec "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "下载 $filename" || true
+            exec_cmd "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "下载 $filename" || true
         done
         
         # 下载文档文件（可选）
         log_info "下载文档文件..."
         for file in "README.md" "TROUBLESHOOTING.md" "QUICKSTART.md" "API.md" "ARCHITECTURE.md" "CONTRIBUTING.md" "CHANGELOG.md"; do
-            safe_exec "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "下载 $file" || true
+            exec_cmd "curl -s -L 'https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/$file' -o '$INSTALL_DIR/$file'" "下载 $file" || true
         done
     fi
     
     # 创建符号链接
     log_info "创建符号链接..."
     if [ -w "$BIN_DIR" ] || need_sudo "$BIN_DIR"; then
-        safe_exec "ln -sf $INSTALL_DIR/bin/coclaw $BIN_DIR/coclaw" "创建 coclaw 命令链接"
+        exec_cmd "ln -sf $INSTALL_DIR/bin/coclaw $BIN_DIR/coclaw" "创建 coclaw 命令链接"
     else
         log_warn "无法写入 $BIN_DIR，请手动创建符号链接:"
         log_info "  ln -s $INSTALL_DIR/bin/coclaw ~/bin/coclaw"
@@ -561,8 +504,8 @@ uninstall_coclaw() {
     # 删除全局安装
     if [ -d "/usr/local/lib/coclaw" ]; then
         log_info "删除全局安装文件..."
-        safe_exec "rm -rf /usr/local/lib/coclaw" "删除安装目录"
-        safe_exec "rm -f /usr/local/bin/coclaw" "删除符号链接"
+        exec_cmd "rm -rf /usr/local/lib/coclaw" "删除安装目录"
+        exec_cmd "rm -f /usr/local/bin/coclaw" "删除符号链接"
     fi
     
     # 删除本地安装
@@ -666,6 +609,19 @@ show_help() {
 # ============================================================================
 
 main() {
+    # 检查是否需要 sudo
+    if [ "$EUID" -ne 0 ]; then
+        echo "❌ 错误: 此安装脚本需要 root 权限"
+        echo ""
+        echo "请使用 sudo 运行:"
+        echo "  sudo ./install.sh"
+        echo ""
+        echo "或使用以下方式:"
+        echo "  curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh | sudo bash"
+        echo ""
+        exit 1
+    fi
+    
     # 解析命令行参数
     local SKIP_OPENCLAW=false
     local LOCAL_INSTALL=false
