@@ -310,6 +310,8 @@ install_openclaw() {
 
 # 安装 Coclaw
 install_coclaw() {
+    local local_install="${1:-false}"
+    
     log_header "安装 Coclaw"
     
     # 安装选项
@@ -318,7 +320,7 @@ install_coclaw() {
     local BIN_DIR=""
     
     # 根据选项确定安装模式
-    if [ "$LOCAL_INSTALL" = true ]; then
+    if [ "$local_install" = true ]; then
         INSTALL_MODE="local"
     fi
     
@@ -723,7 +725,7 @@ main() {
     fi
     
     # 安装 Coclaw
-    install_coclaw
+    install_coclaw "$LOCAL_INSTALL"
     
     # 创建配置文件
     create_config
