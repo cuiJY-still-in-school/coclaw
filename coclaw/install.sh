@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================================
-# Coclaw 安装脚本 v2.2
+# Coclaw 安装脚本 v2.3
 # 支持 macOS 和 Linux 系统
 # 作者: CuiJY (shortsubjayfire@gmail.com)
 # GitHub: https://github.com/cuiJY-still-in-school/coclaw
@@ -498,11 +498,20 @@ verify_installation() {
         log_success "coclaw 命令已安装"
         
         # 测试版本命令
-        if coclaw --version >/dev/null 2>&1; then
-            VERSION=$(coclaw --version)
+        # 使用绝对路径避免 PATH 问题
+        COCLAW_CMD=$(which coclaw)
+        if [ -n "$COCLAW_CMD" ] && "$COCLAW_CMD" --version >/dev/null 2>&1; then
+            VERSION=$("$COCLAW_CMD" --version 2>/dev/null || "$COCLAW_CMD" -v 2>/dev/null || echo "未知")
             log_success "Coclaw 版本: $VERSION"
         else
-            log_warn "无法获取版本信息"
+            # 如果命令执行失败，尝试直接读取 package.json
+            INSTALL_DIR="/usr/local/lib/coclaw"
+            if [ -f "$INSTALL_DIR/package.json" ]; then
+                VERSION=$(grep '"version"' "$INSTALL_DIR/package.json" | cut -d'"' -f4)
+                log_success "Coclaw 版本: $VERSION (从 package.json 读取)"
+            else
+                log_warn "无法获取版本信息"
+            fi
         fi
     else
         log_error "coclaw 命令未找到"
@@ -587,27 +596,27 @@ show_completion() {
     echo -e "${BOLD}🎉 恭喜！Coclaw 已成功安装。${NC}\n"
     
     echo -e "${BOLD}📚 快速开始:${NC}"
-    echo "  1. 创建你的第一个 Agent:"
-    echo "     ${CYAN}coclaw create${NC}"
+    echo -e "  1. 创建你的第一个 Agent:"
+    echo -e "     ${CYAN}coclaw create${NC}"
     echo ""
-    echo "  2. 启动服务器:"
-    echo "     ${CYAN}coclaw server${NC}"
+    echo -e "  2. 启动服务器:"
+    echo -e "     ${CYAN}coclaw server${NC}"
     echo ""
-    echo "  3. 查看所有命令:"
-    echo "     ${CYAN}coclaw --help${NC}"
+    echo -e "  3. 查看所有命令:"
+    echo -e "     ${CYAN}coclaw --help${NC}"
     echo ""
     
     echo -e "${BOLD}🔧 常用命令:${NC}"
-    echo "  ${CYAN}coclaw list${NC}                # 列出所有 Agent"
-    echo "  ${CYAN}coclaw agent <id> start${NC}    # 启动 Agent"
-    echo "  ${CYAN}coclaw performance${NC}         # 查看性能统计"
-    echo "  ${CYAN}coclaw errors${NC}              # 查看错误日志"
+    echo -e "  ${CYAN}coclaw list${NC}                # 列出所有 Agent"
+    echo -e "  ${CYAN}coclaw agent <id> start${NC}    # 启动 Agent"
+    echo -e "  ${CYAN}coclaw performance${NC}         # 查看性能统计"
+    echo -e "  ${CYAN}coclaw errors${NC}              # 查看错误日志"
     echo ""
     
     echo -e "${BOLD}📖 文档:${NC}"
-    echo "  - 完整文档: ${CYAN}cat ~/.coclaw/README.md${NC}"
-    echo "  - 故障排除: ${CYAN}cat ~/.coclaw/TROUBLESHOOTING.md${NC}"
-    echo "  - GitHub: https://github.com/cuiJY-still-in-school/coclaw"
+    echo -e "  - 完整文档: ${CYAN}cat ~/.coclaw/README.md${NC}"
+    echo -e "  - 故障排除: ${CYAN}cat ~/.coclaw/TROUBLESHOOTING.md${NC}"
+    echo -e "  - GitHub: https://github.com/cuiJY-still-in-school/coclaw"
     echo ""
     
     echo -e "${BOLD}🐛 问题反馈:${NC}"
@@ -656,7 +665,7 @@ main() {
                 exit 0
                 ;;
             -v|--version)
-                echo "Coclaw 安装脚本 v2.2"
+                echo "Coclaw 安装脚本 v2.3"
                 exit 0
                 ;;
             -d|--debug)
