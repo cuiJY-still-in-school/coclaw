@@ -43,14 +43,14 @@ async function run() {
       // 这里会调用 openclaw configure
       // 暂时先提示用户手动配置
       cli.warn(
-        "配置功能开发中，请稍后使用 `coclaw ${agentId} configure` 进行配置",
+        "配置功能开发中，请稍后使用 `coclaw agent ${agentId} configure` 进行配置",
       );
     }
 
     cli.info("使用以下命令操作 Agent:");
-    cli.info(`  coclaw ${agentId} start    # 启动 Agent`);
-    cli.info(`  coclaw ${agentId} chat     # 与 Agent 聊天`);
-    cli.info(`  coclaw ${agentId} configure # 配置 Agent`);
+    cli.info(`  coclaw agent ${agentId} start    # 启动 Agent`);
+    cli.info(`  coclaw agent ${agentId} chat     # 与 Agent 聊天`);
+    cli.info(`  coclaw agent ${agentId} configure # 配置 Agent`);
   } catch (error) {
     cli.error(`创建 Agent 失败: ${error.message}`);
     if (process.env.DEBUG) {
