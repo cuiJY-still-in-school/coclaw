@@ -98,6 +98,16 @@ class AgentManager {
       await fs.ensureDir(path.join(agentPath, "files"));
       await fs.ensureDir(path.join(agentPath, "logs"));
 
+      // 创建 OpenClaw agent 目录结构
+      const openclawAgentDir = path.join(
+        agentPath,
+        "data",
+        "agents",
+        "main",
+        "agent",
+      );
+      await fs.ensureDir(openclawAgentDir);
+
       // 创建 Agent 配置
       const agentConfig = {
         id: agentId,
@@ -159,6 +169,31 @@ class AgentManager {
         path.join(agentPath, "data", "chat.db"),
         JSON.stringify({ messages: [], createdAt: new Date().toISOString() }),
       );
+
+      // 尝试复制主 OpenClaw 认证文件（如果存在）
+      try {
+        const mainAuthPath = path.join(
+          process.env.HOME || process.env.USERPROFILE,
+          ".openclaw",
+          "agents",
+          "main",
+          "agent",
+          "auth-profiles.json",
+        );
+
+        if (await fs.pathExists(mainAuthPath)) {
+          await fs.copy(
+            mainAuthPath,
+            path.join(openclawAgentDir, "auth-profiles.json"),
+          );
+          cli.debug("已复制 OpenClaw 认证文件");
+        } else {
+          cli.warn("主 OpenClaw 认证文件不存在，agent 可能需要手动配置认证");
+        }
+      } catch (authError) {
+        cli.warn(`复制认证文件失败: ${authError.message}`);
+        cli.warn("agent 可能需要手动配置认证");
+      }
 
       cli.success(`Agent "${name}" 创建成功`);
       return agentId;
