@@ -19,13 +19,22 @@ Coclaw 是一个基于 OpenClaw 的本地网络 AI 协作工具，支持多 Agen
 #### 方法一：使用安装脚本（推荐）
 
 ```bash
-# 下载并运行安装脚本
-curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh | bash
+# 查看帮助信息（不需要 sudo）
+curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh | bash -s -- --help
+
+# 查看版本信息（不需要 sudo）
+curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh | bash -s -- --version
+
+# 标准安装（需要 sudo）
+curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh | sudo bash
+
+# 本地安装（需要 sudo，但安装在用户目录）
+curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh | sudo bash -s -- --local
 
 # 或先下载再运行
 wget https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh
 chmod +x install.sh
-./install.sh
+sudo ./install.sh
 ```
 
 #### 方法二：手动安装
@@ -732,6 +741,32 @@ export COCLAW_REDIS_URL=redis://localhost:6379
 - 📧 联系: shortsubjayfire@gmail.com
 
 ## 版本历史
+
+### v1.0.5 (2026-04-09)
+
+- 🐛 **安装脚本修复**: 修复语法错误和用户体验问题
+- 🔧 **参数解析优化**: 允许 --help 和 --version 命令在没有 root 权限时运行
+- 📝 **文档更新**: 更新安装说明和故障排除指南
+
+### v1.0.4 (2026-04-09)
+
+- 🐛 **文件下载修复**: 修复安装脚本文件下载不完全问题
+- 📦 **完整文件下载**: 确保下载所有 26 个必要的库文件
+- 🛠️ **入口点修复**: 创建 lib/index.js 作为主入口点
+
+### v1.0.3 (2026-04-09)
+
+- 🔧 **安装脚本简化**: 直接要求 sudo，移除管道运行警告
+- 📋 **安装选项**: 添加 --local 选项支持本地安装
+
+### v1.0.2 (2026-04-09)
+
+- 🐛 **安装修复**: 修复安装脚本权限包装问题
+- 🔄 **远程安装**: 改进远程安装的文件下载逻辑
+
+### v1.0.1 (2026-04-09)
+
+- 🐛 **初始修复**: 修复安装脚本的基本权限问题
 
 ### v1.0.0 (2026-04-08)
 

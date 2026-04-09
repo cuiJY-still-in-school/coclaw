@@ -13,6 +13,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Complete 10-week development plan
 - Core architecture design
 
+## [1.0.5] - 2026-04-09
+
+### Fixed
+
+- **安装脚本语法错误**: 修复安装脚本中的重复代码和语法错误
+- **用户体验改进**: 允许 `--help` 和 `--version` 命令在没有 root 权限时运行
+- **参数解析优化**: 优化命令行参数解析逻辑
+- **文档更新**: 更新所有文档中的安装说明和故障排除指南
+
+## [1.0.4] - 2026-04-09
+
+### Fixed
+
+- **文件下载不完全**: 修复安装脚本只下载部分文件的问题
+- **完整文件下载**: 确保下载所有 26 个必要的库文件
+- **入口点修复**: 创建 `lib/index.js` 作为主入口点，修复 `package.json` 配置
+- **关键文件缺失**: 确保 `lib/openclaw.js` 等关键文件被下载
+
+## [1.0.3] - 2026-04-09
+
+### Changed
+
+- **安装脚本简化**: 直接要求 sudo，移除管道运行警告
+- **安装选项**: 添加 `--local` 选项支持本地用户安装
+- **权限处理**: 简化权限包装逻辑，提高安装成功率
+
+## [1.0.2] - 2026-04-09
+
+### Fixed
+
+- **安装脚本权限问题**: 修复 `sudo $cmd` 无法正确处理带引号命令的问题
+- **远程安装改进**: 改进远程安装的文件下载逻辑和错误处理
+- **命令执行修复**: 使用 `bash -c` 正确处理命令执行
+
+## [1.0.1] - 2026-04-09
+
+### Fixed
+
+- **初始安装修复**: 修复安装脚本的基本权限和路径问题
+- **依赖安装**: 确保 npm 依赖正确安装
+- **符号链接**: 修复命令符号链接创建问题
+
 ## [1.0.0] - 2025-04-07
 
 ### Added
@@ -62,13 +104,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Installation
 
 ```bash
-# Using install script
-curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/v1.0.0/install.sh | bash
+# 查看帮助信息（不需要 sudo）
+curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh | bash -s -- --help
 
-# Or manually
+# 查看版本信息（不需要 sudo）
+curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh | bash -s -- --version
+
+# 标准安装（需要 sudo）
+curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh | sudo bash
+
+# 本地安装（需要 sudo，但安装在用户目录）
+curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh | sudo bash -s -- --local
+
+# 或手动安装
 git clone https://github.com/cuiJY-still-in-school/coclaw.git
-cd coclaw
-./install.sh
+cd coclaw/coclaw
+sudo ./install.sh
 ```
 
 ### Quick Start

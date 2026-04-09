@@ -15,26 +15,36 @@ Coclaw 是一个基于 OpenClaw 的本地局域网 AI 协作工具，提供多 A
 ### 方法1: 使用安装脚本（推荐）
 
 ```bash
-# 下载安装脚本
-curl -fsSL https://raw.githubusercontent.com/yourusername/coclaw/main/install.sh -o install.sh
+# 查看帮助信息（不需要 sudo）
+curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh | bash -s -- --help
 
-# 运行安装脚本
+# 查看版本信息（不需要 sudo）
+curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh | bash -s -- --version
+
+# 标准安装（需要 sudo）
+curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh | sudo bash
+
+# 本地安装（需要 sudo，但安装在用户目录）
+curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh | sudo bash -s -- --local
+
+# 或先下载再运行
+wget https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh
 chmod +x install.sh
-./install.sh
+sudo ./install.sh
 ```
 
 ### 方法2: 手动安装
 
 ```bash
 # 克隆仓库
-git clone https://github.com/yourusername/coclaw.git
-cd coclaw
+git clone https://github.com/cuiJY-still-in-school/coclaw.git
+cd coclaw/coclaw
 
 # 安装依赖
 npm install
 
 # 全局安装（可选）
-npm link
+npm install -g .
 ```
 
 ## 快速开始
@@ -136,15 +146,31 @@ coclaw agent <agent-id> stop
 
 ### 常见问题
 
-1. **OpenClaw 未安装**
+1. **安装脚本需要 root 权限**
+
+   ```
+   ❌ 错误: 此安装脚本需要 root 权限
+   ```
+
+   解决方案：使用 `sudo` 运行安装脚本，或使用 `--local` 选项进行本地安装
+
+2. **文件下载失败**
+
+   ```
+   警告: 无法下载 lib/openclaw.js
+   ```
+
+   解决方案：确保网络连接正常，或手动从 GitHub 下载缺失的文件
+
+3. **OpenClaw 未安装**
 
    ```
    Error: OpenClaw 未安装
    ```
 
-   解决方案：运行 `npm install -g openclaw@latest`
+   解决方案：运行 `npm install -g openclaw@latest` 或使用 `--no-openclaw` 选项跳过 OpenClaw 安装
 
-2. **端口被占用**
+4. **端口被占用**
 
    ```
    Error: Gateway 在 10000ms 内未启动
@@ -152,7 +178,7 @@ coclaw agent <agent-id> stop
 
    解决方案：检查端口是否被其他程序占用，或修改 Agent 配置中的端口号
 
-3. **配置错误**
+5. **配置错误**
    ```
    Error: Invalid config at ...
    ```

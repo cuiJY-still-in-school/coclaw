@@ -53,6 +53,93 @@ coclaw list
 
 ## 常见问题
 
+### 问题0: 安装问题
+
+**症状**: 安装脚本失败，显示权限错误、文件下载失败或其他安装问题。
+
+**解决方案**:
+
+1. **权限错误**:
+
+   ```
+   ❌ 错误: 此安装脚本需要 root 权限
+   ```
+
+   解决方案: 使用 `sudo` 运行安装脚本
+
+   ```bash
+   sudo ./install.sh
+   # 或
+   curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh | sudo bash
+   ```
+
+2. **文件下载失败**:
+
+   ```
+   警告: 无法下载 lib/openclaw.js
+   ```
+
+   解决方案: 确保网络连接正常，或手动下载缺失文件
+
+   ```bash
+   # 手动下载关键文件
+   mkdir -p ~/coclaw-fix/lib
+   curl -L https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/lib/openclaw.js -o ~/coclaw-fix/lib/openclaw.js
+   # 然后复制到安装目录
+   ```
+
+3. **Node.js 版本过低**:
+
+   ```
+   Error: Node.js 版本过低
+   ```
+
+   解决方案: 安装 Node.js v18+
+
+   ```bash
+   # 使用 nvm (推荐)
+   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+   nvm install 18
+   nvm use 18
+
+   # 或使用包管理器
+   # Ubuntu/Debian
+   curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+   sudo apt-get install -y nodejs
+   ```
+
+4. **OpenClaw 安装失败**:
+   解决方案: 跳过 OpenClaw 安装或手动安装
+
+   ```bash
+   # 跳过 OpenClaw 安装
+   sudo ./install.sh --no-openclaw
+
+   # 手动安装 OpenClaw
+   npm install -g openclaw@latest
+   ```
+
+5. **本地安装问题**:
+   解决方案: 使用 `--local` 选项进行用户级安装
+
+   ```bash
+   sudo ./install.sh --local
+   ```
+
+6. **验证安装**:
+   安装完成后验证:
+
+   ```bash
+   # 检查命令是否可用
+   which coclaw
+
+   # 检查版本
+   coclaw --version
+
+   # 检查帮助
+   coclaw --help
+   ```
+
 ### 问题1: 服务器无法启动
 
 **症状**: `coclaw server` 命令失败，显示端口被占用或其他错误。
@@ -197,6 +284,26 @@ coclaw list
 | 5003 | SERVER_RESOURCE_LIMIT  | 服务器资源限制 | 增加系统资源或优化配置 |
 | 5004 | SERVER_CONFIG_ERROR    | 服务器配置错误 | 检查配置文件格式和内容 |
 
+### 安装错误 (6000-6099)
+
+| 代码 | 名称                         | 描述              | 解决方案                   |
+| ---- | ---------------------------- | ----------------- | -------------------------- |
+| 6001 | INSTALL_PERMISSION_DENIED    | 安装权限被拒绝    | 使用 sudo 运行安装脚本     |
+| 6002 | INSTALL_FILE_DOWNLOAD_FAILED | 文件下载失败      | 检查网络连接或手动下载文件 |
+| 6003 | INSTALL_NODEJS_REQUIRED      | Node.js 版本过低  | 安装 Node.js v18+          |
+| 6004 | INSTALL_OPENCLAW_FAILED      | OpenClaw 安装失败 | 手动安装或跳过 OpenClaw    |
+| 6005 | INSTALL_DEPENDENCY_FAILED    | 依赖安装失败      | 检查网络连接和 npm 配置    |
+| 6006 | INSTALL_SCRIPT_CORRUPTED     | 安装脚本损坏      | 重新下载安装脚本           |
+
+### 配置错误 (6100-6999)
+
+| 代码 | 名称                    | 描述           | 解决方案                   |
+| ---- | ----------------------- | -------------- | -------------------------- |
+| 6101 | CONFIG_FILE_NOT_FOUND   | 配置文件未找到 | 创建默认配置文件或检查路径 |
+| 6102 | CONFIG_FORMAT_INVALID   | 配置格式无效   | 检查 JSON 格式和语法       |
+| 6103 | CONFIG_VALUE_INVALID    | 配置值无效     | 检查配置值的有效范围       |
+| 6104 | CONFIG_REQUIRED_MISSING | 必需配置缺失   | 提供缺失的必需配置项       |
+
 ## 性能问题
 
 ### 症状: 消息延迟高
@@ -339,6 +446,7 @@ telnet <server-ip> 18791
    ```
 
 3. 配置反向代理:
+
    ```nginx
    # Nginx 配置示例
    server {
@@ -769,6 +877,6 @@ coclaw server
 
 ---
 
-**最后更新**: 2025-04-07  
-**版本**: 1.0.0  
+**最后更新**: 2026-04-09  
+**版本**: 1.0.5  
 **作者**: Coclaw 开发团队
