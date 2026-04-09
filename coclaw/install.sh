@@ -360,7 +360,7 @@ install_coclaw() {
     if [ -f "package.json" ] && [ -d "lib" ] && [ -d "bin" ]; then
         # 在项目目录中，直接复制文件
         log_info "从本地项目目录复制文件..."
-        cp package.json "$INSTALL_DIR/"
+        safe_exec "cp package.json '$INSTALL_DIR/'" "复制 package.json"
     else
         # 不在项目目录中，从 GitHub 下载
         log_info "从 GitHub 仓库下载文件..."
@@ -373,29 +373,29 @@ install_coclaw() {
         safe_exec "chmod +x '$INSTALL_DIR/bin/coclaw'" "设置可执行权限"
         
         # 创建必要的目录结构
-        mkdir -p "$INSTALL_DIR/lib"
-        mkdir -p "$INSTALL_DIR/ui"
-        mkdir -p "$INSTALL_DIR/templates"
+        safe_exec "mkdir -p '$INSTALL_DIR/lib'" "创建 lib 目录"
+        safe_exec "mkdir -p '$INSTALL_DIR/ui'" "创建 ui 目录"
+        safe_exec "mkdir -p '$INSTALL_DIR/templates'" "创建 templates 目录"
         
         # 标记为从远程安装
-        echo "installed_from=remote" > "$INSTALL_DIR/.install_source"
+        safe_exec "echo 'installed_from=remote' > '$INSTALL_DIR/.install_source'" "创建安装标记文件"
     fi
     
     # 如果是本地安装，复制其他文件
     if [ -f "package.json" ] && [ -d "lib" ] && [ -d "bin" ]; then
         # 复制 README 和文档
-        cp README.md "$INSTALL_DIR/" 2>/dev/null || true
-        cp TROUBLESHOOTING.md "$INSTALL_DIR/" 2>/dev/null || true
-        cp QUICKSTART.md "$INSTALL_DIR/" 2>/dev/null || true
+        safe_exec "cp README.md '$INSTALL_DIR/'" "复制 README.md" || true
+        safe_exec "cp TROUBLESHOOTING.md '$INSTALL_DIR/'" "复制 TROUBLESHOOTING.md" || true
+        safe_exec "cp QUICKSTART.md '$INSTALL_DIR/'" "复制 QUICKSTART.md" || true
         
         # 复制 lib 目录
-        cp -r lib/* "$INSTALL_DIR/lib/" 2>/dev/null || true
+        safe_exec "cp -r lib/* '$INSTALL_DIR/lib/'" "复制 lib 目录" || true
         
         # 复制 ui 目录
-        cp -r ui/* "$INSTALL_DIR/ui/" 2>/dev/null || true
+        safe_exec "cp -r ui/* '$INSTALL_DIR/ui/'" "复制 ui 目录" || true
         
         # 复制 templates 目录
-        cp -r templates/* "$INSTALL_DIR/templates/" 2>/dev/null || true
+        safe_exec "cp -r templates/* '$INSTALL_DIR/templates/'" "复制 templates 目录" || true
     else
         # 远程安装，下载所有必要文件
         log_info "下载核心库文件..."
