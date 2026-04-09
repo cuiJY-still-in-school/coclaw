@@ -10,6 +10,35 @@
 set -e
 
 # ============================================================================
+# 检查是否通过管道运行（sudo 密码输入问题）
+# ============================================================================
+if [ -t 0 ]; then
+    # 从终端运行，正常
+    :
+else
+    # 通过管道运行，警告用户
+    echo "⚠️  警告: 检测到通过管道运行安装脚本"
+    echo ""
+    echo "由于 sudo 密码输入的限制，通过管道运行可能无法正常工作。"
+    echo "建议使用以下方式之一:"
+    echo ""
+    echo "1. 下载后运行 (推荐):"
+    echo "   curl -fsSL https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh -o install.sh"
+    echo "   chmod +x install.sh"
+    echo "   ./install.sh"
+    echo ""
+    echo "2. 使用 wget:"
+    echo "   wget https://raw.githubusercontent.com/cuiJY-still-in-school/coclaw/main/coclaw/install.sh"
+    echo "   chmod +x install.sh"
+    echo "   ./install.sh"
+    echo ""
+    echo "3. 继续通过管道运行 (可能失败):"
+    echo "   按 Ctrl+C 取消，或等待 5 秒后继续..."
+    sleep 5
+    echo "继续安装..."
+fi
+
+# ============================================================================
 # 颜色和样式定义
 # ============================================================================
 RED='\033[0;31m'
@@ -107,10 +136,24 @@ safe_exec() {
     if need_sudo "/usr/local"; then
         log_debug "需要 sudo 权限执行: $cmd"
         if sudo -n true 2>/dev/null; then
+            # sudo 不需要密码
             sudo bash -c "$cmd"
         else
+            # 需要 sudo 密码
             log_info "需要输入密码以继续..."
-            sudo bash -c "$cmd"
+            if [ -t 0 ]; then
+                # 有终端，可以正常输入密码
+                sudo bash -c "$cmd"
+            else
+                # 没有终端（通过管道运行），尝试使用 sudo -S
+                log_warn "通过管道运行，尝试使用 sudo -S..."
+                echo "请手动输入 sudo 密码:" >&2
+                sudo -S bash -c "$cmd" || {
+                    log_error "sudo 密码输入失败"
+                    log_info "请尝试直接运行脚本而不是通过管道"
+                    exit 1
+                }
+            fi
         fi
     else
         log_debug "无需 sudo 执行: $cmd"
