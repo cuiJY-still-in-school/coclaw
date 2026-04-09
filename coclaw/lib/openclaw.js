@@ -191,12 +191,20 @@ class OpenClaw {
       thinking = "medium",
       configPath = null,
       stateDir = null,
+      agentId = null,
     } = options;
 
     const args = ["agent"];
 
+    if (agentId) {
+      args.push("--agent", agentId);
+    }
+
     if (message) {
-      args.push("--message", `"${message}"`);
+      args.push("--message", message);
+    } else {
+      // 如果没有消息，启动交互模式
+      args.push("--message", "开始聊天");
     }
 
     if (thinking) {

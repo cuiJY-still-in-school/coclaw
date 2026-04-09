@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
-const { program } = require('commander');
+const { Command } = require('commander');
 const { version } = require('../package.json');
 const InteractiveUI = require('../ui/interactive');
+
+const program = new Command();
 
 // 设置程序基本信息
 program
@@ -38,6 +40,23 @@ program
   .description('连接到局域网中的其他服务器')
   .action((serverid) => {
     require('../lib/commands/connect').run(serverid);
+  });
+
+// 删除命令
+program
+  .command('delete <agentId>')
+  .description('删除指定的 Agent')
+  .option('-f, --force', '强制删除（不询问确认）')
+  .action((agentId, options) => {
+    try {
+      require('../lib/commands/delete').run(agentId, options.force);
+    } catch (error) {
+      console.error('删除命令执行失败:', error.message);
+      if (process.env.DEBUG) {
+        console.error(error.stack);
+      }
+      process.exit(1);
+    }
   });
 
 // Agent 操作命令

@@ -108,10 +108,12 @@ async function chatWithAgent(agentManager, agentId) {
     // 调用 OpenClaw chat 命令
     const openclaw = agentManager.openclaw;
 
+    // 启动交互式聊天（不传递 message 参数，让 OpenClaw 进入交互模式）
     await openclaw.chat({
       configPath: configPath,
       stateDir: stateDir,
-      thinking: "medium",
+      agentId: agentId,
+      // 不传递 message 参数，让 OpenClaw 进入交互模式
     });
   } catch (error) {
     if (error.message.includes("SIGINT") || error.message.includes("Ctrl+C")) {
